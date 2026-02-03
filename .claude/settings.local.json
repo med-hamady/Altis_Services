@@ -20,7 +20,12 @@
       "Bash(npx vite:*)",
       "Bash(npx supabase:*)",
       "Bash(curl:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: complete Altis Services web application\n\n- React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui\n- Supabase backend \\(auth, database, storage, edge functions\\)\n- Features: dashboard, cases, debtors \\(PP/PM\\), banks, users, imports\n- Excel import with preview cards matching case detail design\n- Inline editing of all fields before case creation\n- Edge functions: process-import \\(Excel parsing\\) + finalize-import \\(case creation\\)\n- 24 SQL migrations with RLS policies\n- Role-based access \\(admin, agent, bank_user\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(ping:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: update Claude Code permissions\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
