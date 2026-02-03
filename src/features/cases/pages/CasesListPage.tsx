@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Plus, FolderKanban } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Plus, FolderKanban, Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePermissions } from '@/contexts/AuthContext'
 import { useCases } from '../hooks/useCases'
+import { useBanks } from '@/features/banks/hooks/useBanks'
 import { CreateCaseDialog } from '../components/CreateCaseDialog'
 
 const statusLabels: Record<string, string> = {
@@ -28,10 +31,58 @@ const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | '
 
 export function CasesListPage() {
   const { data: cases, isLoading } = useCases()
+  const { data: banks } = useBanks()
   const navigate = useNavigate()
   const { isAdmin, isAgent, isBankUser, bankId } = usePermissions()
   const [showCreateCase, setShowCreateCase] = useState(false)
   const canCreateCase = isAdmin || isBankUser
+
+  // Filtres
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedBankId, setSelectedBankId] = useState<string>('all')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [selectedPriority, setSelectedPriority] = useState<string>('all')
+
+  // Filtrage des dossiers
+  const filteredCases = useMemo(() => {
+    if (!cases) return []
+
+    return cases.filter((c) => {
+      // Filtre par banque
+      if (selectedBankId !== 'all' && c.bank_id !== selectedBankId) return false
+
+      // Filtre par statut
+      if (selectedStatus !== 'all' && c.status !== selectedStatus) return false
+
+      // Filtre par priorité
+      if (selectedPriority !== 'all' && c.priority !== selectedPriority) return false
+
+      // Filtre par recherche (référence, nom débiteur)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const reference = c.reference?.toLowerCase() || ''
+        const debtorName = c.debtor_pp
+          ? `${c.debtor_pp.first_name} ${c.debtor_pp.last_name}`.toLowerCase()
+          : c.debtor_pm?.company_name?.toLowerCase() || ''
+        const bankName = c.bank?.name?.toLowerCase() || ''
+
+        if (!reference.includes(query) && !debtorName.includes(query) && !bankName.includes(query)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [cases, selectedBankId, selectedStatus, selectedPriority, searchQuery])
+
+  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || selectedPriority !== 'all' || searchQuery !== ''
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedBankId('all')
+    setSelectedStatus('all')
+    setSelectedPriority('all')
+  }
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -61,12 +112,95 @@ export function CasesListPage() {
         )}
       </div>
 
+      {/* Filtres */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            {/* Recherche */}
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Rechercher</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Référence, débiteur, banque..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {/* Filtre par banque */}
+            {!isBankUser && (
+              <div className="w-full sm:w-[200px] space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Banque</label>
+                <Select value={selectedBankId} onValueChange={setSelectedBankId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toutes les banques" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les banques</SelectItem>
+                    {banks?.map((bank) => (
+                      <SelectItem key={bank.id} value={bank.id}>
+                        {bank.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Filtre par statut */}
+            <div className="w-full sm:w-[180px] space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Statut</label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tous les statuts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  {Object.entries(statusLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtre par priorité */}
+            <div className="w-full sm:w-[150px] space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Priorité</label>
+              <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Toutes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="low">Basse</SelectItem>
+                  <SelectItem value="medium">Moyenne</SelectItem>
+                  <SelectItem value="high">Haute</SelectItem>
+                  <SelectItem value="urgent">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bouton effacer */}
+            {hasActiveFilters && (
+              <Button variant="ghost" size="icon" onClick={clearFilters} className="shrink-0">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Liste */}
       <Card>
         <CardHeader>
           <CardTitle>{isAgent ? 'Dossiers affectés' : 'Tous les dossiers'}</CardTitle>
           <CardDescription>
-            {cases?.length || 0} dossier(s)
+            {filteredCases.length} dossier(s){hasActiveFilters && ` (sur ${cases?.length || 0} au total)`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -74,7 +208,7 @@ export function CasesListPage() {
             <div className="flex items-center justify-center py-8">
               <p className="text-muted-foreground">Chargement...</p>
             </div>
-          ) : cases && cases.length > 0 ? (
+          ) : filteredCases.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -87,7 +221,7 @@ export function CasesListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cases.map((c) => {
+                {filteredCases.map((c) => {
                   const totalAmount =
                     (c.amount_principal || 0) +
                     (c.amount_interest || 0) +
@@ -131,15 +265,28 @@ export function CasesListPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FolderKanban className="h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">Aucun dossier</h3>
+              <h3 className="mt-4 text-lg font-semibold">
+                {hasActiveFilters ? 'Aucun résultat' : 'Aucun dossier'}
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                {isAgent ? 'Aucun dossier ne vous est affecté pour le moment' : 'Commencez par créer un nouveau dossier'}
+                {hasActiveFilters
+                  ? 'Aucun dossier ne correspond aux filtres sélectionnés'
+                  : isAgent
+                    ? 'Aucun dossier ne vous est affecté pour le moment'
+                    : 'Commencez par créer un nouveau dossier'}
               </p>
-              {canCreateCase && (
-                <Button className="mt-4" onClick={() => setShowCreateCase(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nouveau dossier
+              {hasActiveFilters ? (
+                <Button className="mt-4" variant="outline" onClick={clearFilters}>
+                  <X className="mr-2 h-4 w-4" />
+                  Effacer les filtres
                 </Button>
+              ) : (
+                canCreateCase && (
+                  <Button className="mt-4" onClick={() => setShowCreateCase(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nouveau dossier
+                  </Button>
+                )
               )}
             </div>
           )}
