@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(xcopy /E /I /Y \"altis-temp\\\\*\" \"Altis_Services\"\")",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(./node_modules/.bin/tailwindcss:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(copy:*)",
+      "Bash(npm run dev:*)",
+      "Bash(where:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(dir:*)",
+      "Bash(ls -la \"c:\\\\Users\\\\pc\\\\Desktop\\\\Altis_Services\\\\src\\\\features\\\\debtors\"\" 2>&1 || echo \"Directory check \")",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx supabase:*)",
+      "Bash(curl:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

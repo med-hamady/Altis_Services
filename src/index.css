@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Couleurs inspirées du logo Altis Services */
+    --background: 0 0% 100%;
+    --foreground: 210 100% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 100% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 100% 20%;
+    --primary: 210 100% 20%; /* Bleu marine du logo #003366 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 15% 60%; /* Gris argenté du logo #8B9AA8 */
+    --secondary-foreground: 210 100% 20%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 210 15% 46%;
+    --accent: 210 20% 94%;
+    --accent-foreground: 210 100% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 210 100% 20%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Mode sombre avec les couleurs Altis Services */
+    --background: 210 50% 8%;
+    --foreground: 0 0% 98%;
+    --card: 210 50% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 210 50% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 210 100% 35%; /* Bleu marine plus clair pour le mode sombre */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 15% 60%; /* Gris argenté */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 210 30% 15%;
+    --muted-foreground: 210 15% 65%;
+    --accent: 210 15% 60%; /* Gris argenté */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 210 30% 20%;
+    --input: 210 30% 20%;
+    --ring: 210 100% 35%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
