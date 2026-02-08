@@ -33,16 +33,33 @@ const FRENCH_COLUMNS: Record<string, string> = {
   "representant legal": "legal_rep_name",
   "fonction representant (pm)": "legal_rep_title",
   "fonction representant": "legal_rep_title",
+  "numero client": "id_number",
+  "numero client*": "id_number",
+  "n° client": "id_number",
+  "num client": "id_number",
+  "numero identification": "id_number",
+  "type identifiant": "id_type",
+  "type piece": "id_type",
+  "emploi": "occupation",
+  "profession": "occupation",
+  "employeur": "employer",
+  "secteur d'activite": "sector_activity",
+  "secteur dactivite": "sector_activity",
   "telephone principal": "phone_1",
   "telephone principal*": "phone_1",
   "telephone secondaire": "phone_2",
+  "contact": "phone_1",
   "email": "email",
   "adresse": "address",
   "adresse*": "address",
+  "adresse geo": "address",
+  "adresse geographique": "address",
   "ville": "city",
   "secteur": "sector",
   "date d'ouverture": "open_date",
   "date douverture": "open_date",
+  "date d'affectation": "open_date",
+  "date daffectation": "open_date",
   "date de defaut": "default_date",
   "date de defaut*": "default_date",
   "ref. contrat": "contract_ref",
@@ -122,6 +139,16 @@ const LEGACY_COLUMNS: Record<string, string> = {
   "nif": "nif",
   "representant_legal": "legal_rep_name",
   "legal_rep_name": "legal_rep_name",
+  "emploi": "occupation",
+  "occupation": "occupation",
+  "employeur": "employer",
+  "employer": "employer",
+  "numero_client": "id_number",
+  "id_number": "id_number",
+  "id_type": "id_type",
+  "type_identifiant": "id_type",
+  "secteur_activite": "sector_activity",
+  "sector_activity": "sector_activity",
 };
 
 // =============================================================================
@@ -413,6 +440,13 @@ function normalizeRow(mapped: RawRow): NormalizedRow {
   n.treatment_type = normalizeTreatmentType(mapped.treatment_type);
   n.agent_email = mapped.agent_email ? String(mapped.agent_email).trim().toLowerCase() : null;
   n.notes = mapped.notes ? String(mapped.notes).trim() : null;
+
+  // Champs PP spécifiques
+  n.employer = mapped.employer ? String(mapped.employer).trim() : null;
+  n.occupation = mapped.occupation ? String(mapped.occupation).trim() : null;
+  n.id_type = mapped.id_type ? String(mapped.id_type).trim() : null;
+  n.id_number = mapped.id_number ? String(mapped.id_number).trim() : null;
+  n.sector_activity = mapped.sector_activity ? String(mapped.sector_activity).trim() : null;
 
   // Legacy fields fallback
   n.bank_reference = mapped.bank_reference ? String(mapped.bank_reference).trim() : null;

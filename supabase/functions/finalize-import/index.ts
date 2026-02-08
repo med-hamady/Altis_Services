@@ -41,6 +41,7 @@ interface NormalizedRow {
   notes?: string;
   employer?: string;
   occupation?: string;
+  sector_activity?: string;
   rc_number?: string;
   nif?: string;
   legal_rep_name?: string;
@@ -212,6 +213,7 @@ Deno.serve(async (req) => {
                 address_street: data.address || null,
                 address_city: data.city || null,
                 address_region: data.sector || data.region || null,
+                sector_activity: data.sector_activity || null,
                 notes: data.notes || null,
               })
               .select("id")

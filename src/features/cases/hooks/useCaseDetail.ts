@@ -140,9 +140,12 @@ export function useCreateAction() {
 
   return useMutation({
     mutationFn: async (input: CreateActionInput) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Utilisateur non authentifié')
+
       const { data, error } = await supabase
         .from('actions')
-        .insert([input as never])
+        .insert([{ ...input, created_by: user.id } as never])
         .select()
         .single()
 
@@ -174,9 +177,12 @@ export function useCreatePromise() {
 
   return useMutation({
     mutationFn: async (input: CreatePromiseInput) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Utilisateur non authentifié')
+
       const { data, error } = await supabase
         .from('promises')
-        .insert([input as never])
+        .insert([{ ...input, created_by: user.id } as never])
         .select()
         .single()
 
@@ -208,9 +214,12 @@ export function useCreatePayment() {
 
   return useMutation({
     mutationFn: async (input: CreatePaymentInput) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Utilisateur non authentifié')
+
       const { data, error } = await supabase
         .from('payments')
-        .insert([input as never])
+        .insert([{ ...input, declared_by: user.id } as never])
         .select()
         .single()
 

@@ -369,32 +369,85 @@ export function CaseDetailPage() {
           <CardContent className="space-y-1">
             {caseData.debtor_pp ? (
               <>
-                <InfoRow label="Nom" value={`${caseData.debtor_pp.first_name} ${caseData.debtor_pp.last_name}`} icon={User} />
-                <InfoRow label="Date de naissance" value={formatDate(caseData.debtor_pp.date_of_birth)} icon={Calendar} />
-                <InfoRow label={caseData.debtor_pp.id_type || 'Identifiant'} value={caseData.debtor_pp.id_number} icon={Shield} />
-                <InfoRow label="Tél. principal" value={caseData.debtor_pp.phone_primary} icon={Phone} />
-                <InfoRow label="Tél. secondaire" value={caseData.debtor_pp.phone_secondary} icon={Phone} />
-                <InfoRow label="Email" value={caseData.debtor_pp.email} icon={Mail} />
-                <InfoRow
-                  label="Adresse domicile"
-                  value={[caseData.debtor_pp.address_street, caseData.debtor_pp.address_city, caseData.debtor_pp.address_region].filter(Boolean).join(', ') || null}
-                  icon={MapPin}
-                />
-                <InfoRow
-                  label="Adresse travail"
-                  value={[caseData.debtor_pp.address_work_street, caseData.debtor_pp.address_work_city, caseData.debtor_pp.address_work_region].filter(Boolean).join(', ') || null}
-                  icon={Briefcase}
-                />
-                <InfoRow label="Employeur" value={caseData.debtor_pp.employer} icon={Briefcase} />
-                <InfoRow label="Profession" value={caseData.debtor_pp.occupation} />
-                {caseData.debtor_pp.alt_contact_name && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Contact alternatif</p>
-                    <InfoRow label="Nom" value={caseData.debtor_pp.alt_contact_name} icon={User} />
-                    <InfoRow label="Relation" value={caseData.debtor_pp.alt_contact_relation} />
-                    <InfoRow label="Téléphone" value={caseData.debtor_pp.alt_contact_phone} icon={Phone} />
+                <InfoRow label="Nom" value={caseData.debtor_pp.last_name} icon={User} />
+                <InfoRow label="Prénom" value={caseData.debtor_pp.first_name} icon={User} />
+                <InfoRow label="Numéro client" value={caseData.debtor_pp.id_number} icon={Shield} />
+
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Situation professionnelle</p>
+                  <InfoRow label="Emploi" value={caseData.debtor_pp.occupation} icon={Briefcase} />
+                  <InfoRow label="Employeur" value={caseData.debtor_pp.employer} icon={Building2} />
+                  <InfoRow
+                    label="Adresse travail"
+                    value={[caseData.debtor_pp.address_work_street, caseData.debtor_pp.address_work_city, caseData.debtor_pp.address_work_region].filter(Boolean).join(', ') || null}
+                    icon={MapPin}
+                  />
+                </div>
+
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Contact</p>
+                  <InfoRow label="Tél. principal" value={caseData.debtor_pp.phone_primary} icon={Phone} />
+                  <InfoRow label="Tél. secondaire" value={caseData.debtor_pp.phone_secondary} icon={Phone} />
+                  <InfoRow label="Email" value={caseData.debtor_pp.email} icon={Mail} />
+                  {caseData.debtor_pp.alt_contact_name && (
+                    <>
+                      <InfoRow label="Contact alternatif" value={caseData.debtor_pp.alt_contact_name} icon={User} />
+                      <InfoRow label="Relation" value={caseData.debtor_pp.alt_contact_relation} />
+                      <InfoRow label="Tél. alternatif" value={caseData.debtor_pp.alt_contact_phone} icon={Phone} />
+                    </>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Adresse géographique</p>
+                  <InfoRow label="Adresse" value={caseData.debtor_pp.address_street} icon={MapPin} />
+                  <InfoRow label="Ville" value={caseData.debtor_pp.address_city} />
+                  <InfoRow label="Région" value={caseData.debtor_pp.address_region} />
+                </div>
+
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Dates</p>
+                  <InfoRow label="Date d'affectation" value={formatDate(caseData.created_at)} icon={Calendar} />
+                  <InfoRow label="Date de défaut" value={formatDate(caseData.default_date)} icon={Calendar} />
+                </div>
+
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Engagements détaillés</p>
+                  <div className="space-y-1.5 rounded-md bg-muted/50 p-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Montant principal</span>
+                      <span className="font-medium">{formatAmount(caseData.amount_principal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Intérêts</span>
+                      <span className="font-medium">{formatAmount(caseData.amount_interest)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Pénalités</span>
+                      <span className="font-medium">{formatAmount(caseData.amount_penalties)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Frais</span>
+                      <span className="font-medium">{formatAmount(caseData.amount_fees)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1.5 font-semibold text-sm">
+                      <span>Total dû</span>
+                      <span>{formatAmount(totalAmount)}</span>
+                    </div>
+                    {totalPaid > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Total payé</span>
+                        <span>- {formatAmount(totalPaid)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t pt-1.5 font-semibold text-sm">
+                      <span>Solde restant</span>
+                      <span className={remainingBalance > 0 ? 'text-destructive' : 'text-green-600'}>
+                        {formatAmount(remainingBalance)}
+                      </span>
+                    </div>
                   </div>
-                )}
+                </div>
               </>
             ) : caseData.debtor_pm ? (
               <>
