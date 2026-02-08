@@ -95,9 +95,9 @@ export function CasesListPage() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             {isAgent ? 'Mes dossiers' : 'Dossiers'}
           </h1>
           <p className="text-muted-foreground">
@@ -105,7 +105,7 @@ export function CasesListPage() {
           </p>
         </div>
         {canCreateCase && (
-          <Button onClick={() => setShowCreateCase(true)}>
+          <Button onClick={() => setShowCreateCase(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Nouveau dossier
           </Button>
@@ -214,10 +214,10 @@ export function CasesListPage() {
                 <TableRow>
                   <TableHead>Référence</TableHead>
                   <TableHead>Débiteur</TableHead>
-                  <TableHead>Banque</TableHead>
-                  <TableHead>Montant total</TableHead>
+                  <TableHead className="hidden md:table-cell">Banque</TableHead>
+                  <TableHead>Montant</TableHead>
                   <TableHead>Statut</TableHead>
-                  <TableHead>Priorité</TableHead>
+                  <TableHead className="hidden md:table-cell">Priorité</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -237,11 +237,11 @@ export function CasesListPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-[200px] truncate">
+                        <div className="max-w-[120px] sm:max-w-[200px] truncate">
                           {c.debtor_pp ? `${c.debtor_pp.first_name} ${c.debtor_pp.last_name}` : c.debtor_pm?.company_name || '—'}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="max-w-[150px] truncate">
                           {c.bank?.name || '—'}
                         </div>
@@ -252,7 +252,7 @@ export function CasesListPage() {
                       <TableCell>
                         <span className="text-sm">{statusLabels[c.status] || c.status}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <Badge variant={priorityColors[c.priority] || 'default'}>
                           {c.priority}
                         </Badge>

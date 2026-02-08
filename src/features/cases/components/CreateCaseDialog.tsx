@@ -304,7 +304,7 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 Informations sur la créance
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="product_type"
@@ -357,7 +357,7 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 Montants de la créance (MRU)
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="amount_principal"
@@ -388,7 +388,7 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="amount_penalties"
@@ -427,7 +427,7 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 Dernier paiement connu (côté banque)
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="last_bank_payment_date"
@@ -466,7 +466,7 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 Classification & Risque
               </h3>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="priority"

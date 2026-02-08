@@ -221,9 +221,9 @@ export function CaseDetailPage() {
           <Button variant="outline" size="icon" onClick={() => navigate('/cases')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight font-mono">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-mono">
                 {caseData.reference}
               </h1>
               <Badge variant={statusVariant(caseData.status)}>
@@ -241,15 +241,15 @@ export function CaseDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           {canCreateAction && caseData.status !== 'closed' && caseData.status !== 'paid' && (
-            <Button onClick={() => openQuickAction()} variant="default">
+            <Button onClick={() => openQuickAction()} variant="default" className="w-full sm:w-auto">
               <Zap className="mr-2 h-4 w-4" />
               Faire maintenant
             </Button>
           )}
           {isAdmin && (
-            <Button onClick={() => setAssignDialogOpen(true)} variant="outline">
+            <Button onClick={() => setAssignDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
               <UserCheck className="mr-2 h-4 w-4" />
               {caseData.assigned_agent ? 'Réaffecter' : 'Affecter un agent'}
             </Button>
@@ -258,7 +258,7 @@ export function CaseDetailPage() {
       </div>
 
       {/* Grille d'informations */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Card Informations du dossier */}
         <Card>
           <CardHeader className="pb-3">
@@ -555,22 +555,22 @@ export function CaseDetailPage() {
 
       {/* Onglets */}
       <Tabs defaultValue="actions">
-        <TabsList>
-          <TabsTrigger value="actions" className="gap-1.5">
-            <MessageSquare className="h-3.5 w-3.5" />
+        <TabsList className="w-full grid grid-cols-4">
+          <TabsTrigger value="actions" className="gap-1 text-xs sm:text-sm sm:gap-1.5">
+            <MessageSquare className="hidden sm:block h-3.5 w-3.5" />
             Actions ({actions?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="promises" className="gap-1.5">
-            <Calendar className="h-3.5 w-3.5" />
+          <TabsTrigger value="promises" className="gap-1 text-xs sm:text-sm sm:gap-1.5">
+            <Calendar className="hidden sm:block h-3.5 w-3.5" />
             Promesses ({promises?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="payments" className="gap-1.5">
-            <CreditCard className="h-3.5 w-3.5" />
+          <TabsTrigger value="payments" className="gap-1 text-xs sm:text-sm sm:gap-1.5">
+            <CreditCard className="hidden sm:block h-3.5 w-3.5" />
             Paiements ({payments?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="documents" className="gap-1.5">
-            <FileText className="h-3.5 w-3.5" />
-            Documents ({documents?.length || 0})
+          <TabsTrigger value="documents" className="gap-1 text-xs sm:text-sm sm:gap-1.5">
+            <FileText className="hidden sm:block h-3.5 w-3.5" />
+            Docs ({documents?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -593,8 +593,8 @@ export function CaseDetailPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Résultat</TableHead>
-                      <TableHead>Compte-rendu</TableHead>
-                      <TableHead>Prochaine action</TableHead>
+                      <TableHead className="hidden md:table-cell">Compte-rendu</TableHead>
+                      <TableHead className="hidden md:table-cell">Prochaine action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -613,10 +613,10 @@ export function CaseDetailPage() {
                             {ActionResultLabels[action.result] || action.result}
                           </span>
                         </TableCell>
-                        <TableCell className="max-w-[300px]">
+                        <TableCell className="hidden md:table-cell max-w-[300px]">
                           <p className="text-sm truncate">{action.notes || '—'}</p>
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="hidden md:table-cell text-sm">
                           {action.next_action_type ? (
                             <span>
                               {ActionTypeLabels[action.next_action_type]} — {formatDate(action.next_action_date)}
@@ -761,7 +761,7 @@ export function CaseDetailPage() {
                     <TableRow>
                       <TableHead>Nom du fichier</TableHead>
                       <TableHead>Catégorie</TableHead>
-                      <TableHead>Visibilité</TableHead>
+                      <TableHead className="hidden sm:table-cell">Visibilité</TableHead>
                       <TableHead>Date d'ajout</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -779,7 +779,7 @@ export function CaseDetailPage() {
                             {DocumentCategoryLabels[doc.category] || doc.category}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="hidden sm:table-cell text-sm">
                           {DocumentVisibilityLabels[doc.visibility] || doc.visibility}
                         </TableCell>
                         <TableCell className="text-sm">

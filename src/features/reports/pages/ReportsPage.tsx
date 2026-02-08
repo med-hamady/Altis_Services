@@ -77,7 +77,7 @@ export function ReportsPage() {
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Rapports</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Rapports</h1>
           <p className="text-muted-foreground">
             Générez des rapports PDF par banque
           </p>
@@ -145,7 +145,7 @@ export function ReportsPage() {
           ) : stats && cases ? (
             <>
               {/* Statistiques */}
-              <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardDescription>Total dossiers</CardDescription>
@@ -294,7 +294,7 @@ export function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   {cases.length > 0 ? (
-                    <div className="rounded-md border">
+                    <div className="rounded-md border overflow-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-muted/50">
                           <tr>

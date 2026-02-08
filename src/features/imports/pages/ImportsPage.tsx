@@ -85,7 +85,7 @@ export function ImportsPage() {
     <div className="space-y-6">
       {/* En-tête */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Import Excel</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Import Excel</h1>
         <p className="text-muted-foreground">
           Importez des dossiers en masse à partir d'un fichier Excel
         </p>
@@ -173,8 +173,8 @@ export function ImportsPage() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Banque</TableHead>
-                  <TableHead>Fichier</TableHead>
-                  <TableHead>Lignes</TableHead>
+                  <TableHead className="hidden md:table-cell">Fichier</TableHead>
+                  <TableHead className="hidden md:table-cell">Lignes</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -190,7 +190,7 @@ export function ImportsPage() {
                         {imp.bank?.name || '—'}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
                         <span className="max-w-[150px] truncate text-sm">
@@ -198,7 +198,7 @@ export function ImportsPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2 text-sm">
                         {imp.total_rows > 0 && (
                           <>

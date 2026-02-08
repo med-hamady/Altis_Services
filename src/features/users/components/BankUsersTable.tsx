@@ -41,8 +41,8 @@ export function BankUsersTable() {
               <TableRow>
                 <TableHead>Nom complet</TableHead>
                 <TableHead>Banque</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Téléphone</TableHead>
+                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -59,8 +59,8 @@ export function BankUsersTable() {
                   <TableCell>
                     {user.bank?.name || '—'}
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.phone || '—'}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
+                  <TableCell className="hidden md:table-cell">{user.phone || '—'}</TableCell>
                   <TableCell>
                     <Badge variant={user.is_active ? 'default' : 'secondary'}>
                       {user.is_active ? 'Actif' : 'Inactif'}

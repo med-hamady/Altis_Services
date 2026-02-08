@@ -11,7 +11,7 @@ export function UsersListPage() {
     <div className="space-y-6">
       {/* En-tête */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Utilisateurs</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Utilisateurs</h1>
         <p className="text-muted-foreground">
           Gestion des administrateurs, agents et utilisateurs bancaires
         </p>
@@ -19,10 +19,10 @@ export function UsersListPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="admins">Administrateurs</TabsTrigger>
-          <TabsTrigger value="agents">Agents terrain</TabsTrigger>
-          <TabsTrigger value="bank_users">Utilisateurs Banque</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3">
+          <TabsTrigger value="admins" className="text-xs sm:text-sm">Admins</TabsTrigger>
+          <TabsTrigger value="agents" className="text-xs sm:text-sm">Agents</TabsTrigger>
+          <TabsTrigger value="bank_users" className="text-xs sm:text-sm">Banques</TabsTrigger>
         </TabsList>
 
         <TabsContent value="admins" className="mt-6">

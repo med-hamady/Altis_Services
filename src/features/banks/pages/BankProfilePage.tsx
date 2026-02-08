@@ -168,7 +168,7 @@ export function BankProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Mon profil</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Mon profil</h1>
         <p className="text-muted-foreground">
           Gérez les informations de votre banque et votre profil personnel
         </p>
@@ -243,7 +243,7 @@ export function BankProfilePage() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={bankForm.control}
                   name="city"
@@ -350,7 +350,7 @@ export function BankProfilePage() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={userForm.control}
                   name="phone"

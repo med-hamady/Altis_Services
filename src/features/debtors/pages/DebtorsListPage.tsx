@@ -77,27 +77,28 @@ export function DebtorsListPage() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0"
             onClick={() => navigate('/debtors')}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Débiteurs — {bank?.name ?? 'Chargement...'}
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">
+              Débiteurs — {bank?.name ?? '...'}
             </h1>
-            <p className="text-muted-foreground">
-              {totalCount} débiteur(s) — Personnes physiques et morales
+            <p className="text-sm text-muted-foreground">
+              {totalCount} débiteur(s) — PP et PM
             </p>
           </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Nouveau débiteur
             </Button>
@@ -117,7 +118,7 @@ export function DebtorsListPage() {
 
       {/* Barre de recherche */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Rechercher un débiteur..."
@@ -160,9 +161,9 @@ export function DebtorsListPage() {
                       <TableHead>Nom complet</TableHead>
                       <TableHead>N° identité</TableHead>
                       <TableHead>Téléphone</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Ville</TableHead>
-                      <TableHead>Profession</TableHead>
+                      <TableHead className="hidden md:table-cell">Email</TableHead>
+                      <TableHead className="hidden md:table-cell">Ville</TableHead>
+                      <TableHead className="hidden lg:table-cell">Profession</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -182,9 +183,9 @@ export function DebtorsListPage() {
                           </span>
                         </TableCell>
                         <TableCell>{debtor.phone_primary || '—'}</TableCell>
-                        <TableCell>{debtor.email || '—'}</TableCell>
-                        <TableCell>{debtor.address_city || '—'}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">{debtor.email || '—'}</TableCell>
+                        <TableCell className="hidden md:table-cell">{debtor.address_city || '—'}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {debtor.occupation ? (
                             <Badge variant="outline">{debtor.occupation}</Badge>
                           ) : (
@@ -228,10 +229,10 @@ export function DebtorsListPage() {
                     <TableRow>
                       <TableHead>Raison sociale</TableHead>
                       <TableHead>RC</TableHead>
-                      <TableHead>NIF</TableHead>
+                      <TableHead className="hidden md:table-cell">NIF</TableHead>
                       <TableHead>Téléphone</TableHead>
-                      <TableHead>Représentant légal</TableHead>
-                      <TableHead>Secteur</TableHead>
+                      <TableHead className="hidden md:table-cell">Représentant légal</TableHead>
+                      <TableHead className="hidden lg:table-cell">Secteur</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -248,13 +249,13 @@ export function DebtorsListPage() {
                             {debtor.rc_number || '—'}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <span className="font-mono text-sm">
                             {debtor.nif || '—'}
                           </span>
                         </TableCell>
                         <TableCell>{debtor.phone_primary || '—'}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           {debtor.legal_rep_name ? (
                             <div>
                               <div className="font-medium">{debtor.legal_rep_name}</div>
@@ -266,7 +267,7 @@ export function DebtorsListPage() {
                             '—'
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {debtor.sector_activity ? (
                             <Badge variant="outline">{debtor.sector_activity}</Badge>
                           ) : (

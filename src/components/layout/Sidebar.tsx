@@ -83,7 +83,11 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const { userType } = useAuth()
 
   const filteredNavItems = navItems.filter((item) => {
@@ -94,7 +98,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card"
+      className="fixed inset-y-0 left-0 z-50 flex w-64 max-w-[80vw] flex-col border-r bg-card"
       aria-label="Navigation principale"
     >
       {/* Logo */}
@@ -110,6 +114,7 @@ export function Sidebar() {
               <NavLink
                 to={item.href}
                 end={item.href === '/'}
+                onClick={onNavigate}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',

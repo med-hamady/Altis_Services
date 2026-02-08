@@ -41,10 +41,10 @@ export function AgentsTable() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom complet</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Téléphone</TableHead>
-                  <TableHead>Secteur</TableHead>
-                  <TableHead>Zone</TableHead>
+                  <TableHead className="hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="hidden md:table-cell">Téléphone</TableHead>
+                  <TableHead className="hidden md:table-cell">Secteur</TableHead>
+                  <TableHead className="hidden lg:table-cell">Zone</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -58,10 +58,10 @@ export function AgentsTable() {
                         <span className="font-medium">{agent.full_name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{agent.email}</TableCell>
-                    <TableCell>{agent.phone || '—'}</TableCell>
-                    <TableCell>{agent.sector || '—'}</TableCell>
-                    <TableCell>{agent.zone || '—'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{agent.email}</TableCell>
+                    <TableCell className="hidden md:table-cell">{agent.phone || '—'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{agent.sector || '—'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{agent.zone || '—'}</TableCell>
                     <TableCell>
                       <Badge variant={agent.is_active ? 'default' : 'secondary'}>
                         {agent.is_active ? 'Actif' : 'Inactif'}

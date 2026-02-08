@@ -38,8 +38,8 @@ export function AdminsTable() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nom complet</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Téléphone</TableHead>
+                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -53,8 +53,8 @@ export function AdminsTable() {
                       <span className="font-medium">{admin.full_name}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>{admin.phone || '—'}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{admin.email}</TableCell>
+                  <TableCell className="hidden md:table-cell">{admin.phone || '—'}</TableCell>
                   <TableCell>
                     <Badge variant={admin.is_active ? 'default' : 'secondary'}>
                       {admin.is_active ? 'Actif' : 'Inactif'}
