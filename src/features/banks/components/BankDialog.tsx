@@ -36,6 +36,7 @@ type BankFormData = {
   city: string | null
   phone: string | null
   email: string | null
+  logo_url: string | null
   is_active: boolean
 }
 
@@ -51,6 +52,7 @@ export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
       city: '',
       phone: '',
       email: '',
+      logo_url: null,
       is_active: true,
     },
   })
@@ -65,6 +67,7 @@ export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
         city: bank.city || '',
         phone: bank.phone || '',
         email: bank.email || '',
+        logo_url: bank.logo_url,
         is_active: bank.is_active,
       })
     } else {
@@ -75,6 +78,7 @@ export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
         city: '',
         phone: '',
         email: '',
+        logo_url: null,
         is_active: true,
       })
     }

@@ -33,7 +33,6 @@ const statusLabels: Record<string, string> = {
 
 // Couleurs de la marque Altis Services
 const NAVY: [number, number, number] = [0, 51, 102] // #003366
-const NAVY_LIGHT: [number, number, number] = [0, 71, 132] // Variante plus claire
 const SILVER: [number, number, number] = [139, 154, 168] // #8B9AA8
 const WHITE: [number, number, number] = [255, 255, 255]
 const DARK: [number, number, number] = [33, 37, 41]

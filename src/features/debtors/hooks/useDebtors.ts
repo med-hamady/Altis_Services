@@ -47,7 +47,8 @@ export function useDebtorsPPByBank(bankId: string) {
       if (casesError) throw casesError
       if (!cases || cases.length === 0) return []
 
-      const debtorIds = [...new Set(cases.map((c) => c.debtor_pp_id as string))]
+      const typedCases = cases as unknown as { debtor_pp_id: string }[]
+      const debtorIds = [...new Set(typedCases.map((c) => c.debtor_pp_id))]
 
       const { data, error } = await supabase
         .from('debtors_pp')
@@ -76,7 +77,8 @@ export function useDebtorsPMByBank(bankId: string) {
       if (casesError) throw casesError
       if (!cases || cases.length === 0) return []
 
-      const debtorIds = [...new Set(cases.map((c) => c.debtor_pm_id as string))]
+      const typedCases = cases as unknown as { debtor_pm_id: string }[]
+      const debtorIds = [...new Set(typedCases.map((c) => c.debtor_pm_id))]
 
       const { data, error } = await supabase
         .from('debtors_pm')
@@ -103,9 +105,10 @@ export function useDebtorCountsByBank() {
       if (error) throw error
       if (!data) return {}
 
+      const typedData = data as unknown as { bank_id: string; debtor_pp_id: string | null; debtor_pm_id: string | null }[]
       const counts: Record<string, { pp: Set<string>; pm: Set<string> }> = {}
 
-      for (const c of data) {
+      for (const c of typedData) {
         if (!counts[c.bank_id]) {
           counts[c.bank_id] = { pp: new Set(), pm: new Set() }
         }

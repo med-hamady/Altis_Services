@@ -13,7 +13,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { Logo } from '@/components/ui/logo'

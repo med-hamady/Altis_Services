@@ -401,9 +401,9 @@ function CasePreviewCard({
           >
             {String(d.priority ?? 'medium')}
           </Badge>
-          {d.treatment_type && (
+          {d.treatment_type ? (
             <Badge variant="outline">{String(d.treatment_type)}</Badge>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -760,7 +760,7 @@ export function ImportPreviewPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {createdCases.map((c: Record<string, unknown>) => {
+                    {createdCases.map((c) => {
                       const caseTotal =
                         (Number(c.amount_principal) || 0) +
                         (Number(c.amount_interest) || 0) +

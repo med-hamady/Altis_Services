@@ -87,8 +87,10 @@ export function useCreateImport() {
 
       if (insertError) throw insertError
 
+      const typedRecord = importRecord as unknown as { id: string }
+
       // 2. Upload file to storage
-      const filePath = `${bankId}/${importRecord.id}.xlsx`
+      const filePath = `${bankId}/${typedRecord.id}.xlsx`
       const { error: uploadError } = await supabase.storage
         .from('imports')
         .upload(filePath, file, {
@@ -98,7 +100,7 @@ export function useCreateImport() {
 
       if (uploadError) {
         // Cleanup: delete the import record
-        await supabase.from('imports').delete().eq('id', importRecord.id)
+        await supabase.from('imports').delete().eq('id', typedRecord.id)
         throw uploadError
       }
 
@@ -106,7 +108,7 @@ export function useCreateImport() {
       const { data: updated, error: updateError } = await supabase
         .from('imports')
         .update({ file_path: filePath } as never)
-        .eq('id', importRecord.id)
+        .eq('id', typedRecord.id)
         .select('*, bank:banks(*)')
         .single()
 
@@ -173,8 +175,9 @@ export function useApproveAllValidRows() {
 
       if (!rows) return
 
-      const validIds = rows
-        .filter((r) => !r.errors || (r.errors as unknown[]).length === 0)
+      const typedRows = rows as unknown as { id: string; errors: unknown[] | null }[]
+      const validIds = typedRows
+        .filter((r) => !r.errors || r.errors.length === 0)
         .map((r) => r.id)
 
       if (validIds.length === 0) return
@@ -228,7 +231,8 @@ export function useCasesByImport(importId: string | null, status: string | undef
 
       if (logsError || !logs || logs.length === 0) return []
 
-      const caseIds = logs.map((l) => l.record_id)
+      const typedLogs = logs as unknown as { record_id: string }[]
+      const caseIds = typedLogs.map((l) => l.record_id)
 
       // 2. Charger les cases avec les relations
       const { data: cases, error: casesError } = await supabase

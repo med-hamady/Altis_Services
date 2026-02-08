@@ -8,12 +8,11 @@ import {
   BarChart3,
   UserCircle,
   ClipboardList,
-  LogOut,
   UserCog,
   FileUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { useAuth, usePermissions } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { Logo } from '@/components/ui/logo'
 
 interface NavItem {
@@ -85,22 +84,13 @@ const navItems: NavItem[] = [
 ]
 
 export function Sidebar() {
-  const { currentUser, userType, signOut } = useAuth()
-  const { isAdmin, isAgent, isBankUser } = usePermissions()
+  const { userType } = useAuth()
 
   const filteredNavItems = navItems.filter((item) => {
     if (!item.roles) return true
     if (!userType) return false
     return item.roles.includes(userType)
   })
-
-  const roleLabel = isAdmin
-    ? 'Administrateur'
-    : isAgent
-      ? 'Agent terrain'
-      : isBankUser
-        ? 'Utilisateur banque'
-        : ''
 
   return (
     <aside

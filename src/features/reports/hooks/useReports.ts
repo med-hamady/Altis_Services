@@ -43,8 +43,10 @@ export function useBankStats(bankId: string | null) {
       if (error) throw error
       if (!cases) return null
 
+      const typedCases = cases as unknown as { status: string; priority: string; amount_principal: number; amount_interest: number; amount_penalties: number; amount_fees: number }[]
+
       const stats = {
-        totalCases: cases.length,
+        totalCases: typedCases.length,
         byStatus: {} as Record<string, number>,
         byPriority: {} as Record<string, number>,
         totalAmount: 0,
@@ -56,7 +58,7 @@ export function useBankStats(bankId: string | null) {
         totalRemainingBalance: 0,
       }
 
-      cases.forEach((c) => {
+      typedCases.forEach((c) => {
         // Par statut
         stats.byStatus[c.status] = (stats.byStatus[c.status] || 0) + 1
 

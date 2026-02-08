@@ -24,7 +24,7 @@ const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | '
 
 export function ImportsPage() {
   const { currentUser } = useAuth()
-  const { data: banks, isLoading: banksLoading } = useBanks()
+  const { data: banks } = useBanks()
   const { data: imports, isLoading: importsLoading } = useImports()
   const createImport = useCreateImport()
   const processImport = useProcessImport()
