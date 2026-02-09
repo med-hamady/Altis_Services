@@ -23,8 +23,12 @@ const FRENCH_COLUMNS: Record<string, string> = {
   "nom / raison sociale": "debtor_name",
   "nom / raison sociale*": "debtor_name",
   "nom/raison sociale": "debtor_name",
+  "nom": "debtor_name",
+  "nom*": "debtor_name",
+  "raison sociale": "debtor_name",
   "prenom (pp)": "debtor_first_name",
   "prenom": "debtor_first_name",
+  "prenom*": "debtor_first_name",
   "rc (pm)": "rc_number",
   "rc": "rc_number",
   "nif (pm)": "nif",
@@ -43,13 +47,21 @@ const FRENCH_COLUMNS: Record<string, string> = {
   "emploi": "occupation",
   "profession": "occupation",
   "employeur": "employer",
+  "employer": "employer",
   "secteur d'activite": "sector_activity",
   "secteur dactivite": "sector_activity",
   "telephone principal": "phone_1",
   "telephone principal*": "phone_1",
+  "telephone": "phone_1",
+  "telephone*": "phone_1",
+  "tel": "phone_1",
+  "tel principal": "phone_1",
   "telephone secondaire": "phone_2",
+  "tel secondaire": "phone_2",
   "contact": "phone_1",
+  "contact*": "phone_1",
   "email": "email",
+  "email*": "email",
   "adresse": "address",
   "adresse*": "address",
   "adresse geo": "address",
@@ -68,13 +80,22 @@ const FRENCH_COLUMNS: Record<string, string> = {
   "reference contrat": "contract_ref",
   "montant principal": "amount_principal",
   "montant principal*": "amount_principal",
+  "montant principale": "amount_principal",
+  "montant": "amount_principal",
+  "engagement": "amount_principal",
+  "engagements": "amount_principal",
   "interets / penalites": "amount_interest",
   "interets/penalites": "amount_interest",
+  "interets/penalite": "amount_interest",
+  "interets": "amount_interest",
   "penalites de retard": "amount_penalties",
+  "penalites": "amount_penalties",
   "frais": "amount_fees",
+  "frais*": "amount_fees",
   "total du (auto)": "total_due",
   "total du": "total_due",
   "total du*": "total_due",
+  "totale du": "total_due",
   "solde restant (auto)": "remaining_balance",
   "solde restant": "remaining_balance",
   "devise": "currency",
@@ -83,6 +104,22 @@ const FRENCH_COLUMNS: Record<string, string> = {
   "type de traitement": "treatment_type",
   "agent assigne (email)": "agent_email",
   "agent assigne": "agent_email",
+  "agent en charge": "agent_email",
+  "entreprise": "employer",
+  "pays": "city",
+  "numero de telephone": "phone_1",
+  "date d'entree en situation d'impaye": "default_date",
+  "date dentree en situation dimpaye": "default_date",
+  "nature du pret": "loan_nature",
+  "nature du pret*": "loan_nature",
+  "nature de la garantie detenue": "guarantee_nature",
+  "nature de la garantie": "guarantee_nature",
+  "demarche de recouvrement deja entreprises": "recovery_steps",
+  "demarche de recouvrement": "recovery_steps",
+  "demarches de recouvrement": "recovery_steps",
+  "photo ou specimen du debiteur": "debtor_photo",
+  "photo": "debtor_photo",
+  "specimen": "debtor_photo",
   "notes": "notes",
 };
 
@@ -176,6 +213,7 @@ function normalizeHeader(col: string): string {
     .trim()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
     .replace(/\s+/g, " ");
 }
 
@@ -244,12 +282,29 @@ function normalizeTreatmentType(val: unknown): string {
 }
 
 // =============================================================================
+// Dynamic header patterns (for columns with variable parts like dates)
+// =============================================================================
+
+const DYNAMIC_PATTERNS: Array<{ pattern: RegExp; field: string }> = [
+  { pattern: /^engagements?\s+au\s+/, field: "amount_principal" },
+];
+
+function matchDynamicHeader(normalizedHeader: string): string | undefined {
+  for (const { pattern, field } of DYNAMIC_PATTERNS) {
+    if (pattern.test(normalizedHeader)) return field;
+  }
+  return undefined;
+}
+
+// =============================================================================
 // Detect format
 // =============================================================================
 
 function detectFormat(headers: string[]): "french" | "legacy" | "unknown" {
   const normalized = headers.map(normalizeHeader);
-  const frenchMatches = normalized.filter((h) => FRENCH_COLUMNS[h] !== undefined).length;
+  const frenchMatches = normalized.filter(
+    (h) => FRENCH_COLUMNS[h] !== undefined || matchDynamicHeader(h) !== undefined
+  ).length;
   const legacyNormalized = normalized.map((h) => h.replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""));
   const legacyMatches = legacyNormalized.filter((h) => LEGACY_COLUMNS[h] !== undefined).length;
 
@@ -285,7 +340,7 @@ function mapColumns(rawRow: RawRow, format: "french" | "legacy"): RawRow {
       normalizedKey = normalizeHeader(key);
       // Ignorer la colonne Banque — on la traite séparément
       if (normalizedKey === "banque" || normalizedKey === "banque*") continue;
-      internalKey = columnMap[normalizedKey];
+      internalKey = columnMap[normalizedKey] || matchDynamicHeader(normalizedKey);
     } else {
       normalizedKey = normalizeHeader(key).replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
       internalKey = columnMap[normalizedKey];
@@ -325,36 +380,42 @@ function validateRow(
   const warnings: ValidationIssue[] = [];
 
   // --- Required fields ---
-  if (!row.debtor_type) {
-    errors.push({ field: "debtor_type", message: "Type débiteur requis (PP ou PM)" });
-  } else {
+  // debtor_type: optionnel, défaut "pp" si absent
+  if (row.debtor_type) {
     const dt = normalizeDebtorType(row.debtor_type);
     if (!dt) {
       errors.push({ field: "debtor_type", message: `Type débiteur invalide: ${row.debtor_type} (attendu PP ou PM)` });
     }
+  } else {
+    warnings.push({ field: "debtor_type", message: "Type débiteur absent, défaut PP appliqué" });
   }
 
+  // Nom requis (erreur bloquante)
   if (!row.debtor_name) {
     errors.push({ field: "debtor_name", message: "Nom / Raison sociale requis" });
   }
 
+  // Téléphone : warning si absent (pas bloquant)
   if (!row.phone_1) {
-    errors.push({ field: "phone_1", message: "Téléphone principal requis" });
+    warnings.push({ field: "phone_1", message: "Téléphone principal manquant" });
   }
 
+  // Réf contrat : warning si absent (pas bloquant)
   if (!row.contract_ref) {
-    errors.push({ field: "contract_ref", message: "Réf. contrat requise" });
+    warnings.push({ field: "contract_ref", message: "Réf. contrat manquante" });
   }
 
+  // Date de défaut : warning si absente (pas bloquant)
   if (!row.default_date) {
-    errors.push({ field: "default_date", message: "Date de défaut requise" });
+    warnings.push({ field: "default_date", message: "Date de défaut manquante" });
   } else if (!parseDate(row.default_date)) {
     errors.push({ field: "default_date", message: "Date de défaut invalide" });
   }
 
+  // Montant principal : warning si absent (pas bloquant, sera 0)
   if (!row.amount_principal && row.amount_principal !== 0) {
-    errors.push({ field: "amount_principal", message: "Montant principal requis" });
-  } else {
+    warnings.push({ field: "amount_principal", message: "Montant principal manquant, sera 0" });
+  } else if (row.amount_principal) {
     const amt = parseAmount(row.amount_principal);
     if (amt === null) errors.push({ field: "amount_principal", message: "Montant principal non numérique" });
     else if (amt < 0) errors.push({ field: "amount_principal", message: "Montant principal négatif" });
@@ -439,7 +500,15 @@ function normalizeRow(mapped: RawRow): NormalizedRow {
   n.priority = normalizePriority(mapped.priority);
   n.treatment_type = normalizeTreatmentType(mapped.treatment_type);
   n.agent_email = mapped.agent_email ? String(mapped.agent_email).trim().toLowerCase() : null;
-  n.notes = mapped.notes ? String(mapped.notes).trim() : null;
+
+  // Colonnes extra PP → concaténées dans notes
+  const extraNotes: string[] = [];
+  if (mapped.loan_nature) extraNotes.push(`Nature du Prêt: ${String(mapped.loan_nature).trim()}`);
+  if (mapped.guarantee_nature) extraNotes.push(`Garantie: ${String(mapped.guarantee_nature).trim()}`);
+  if (mapped.recovery_steps) extraNotes.push(`Démarches: ${String(mapped.recovery_steps).trim()}`);
+  if (mapped.debtor_photo) extraNotes.push(`Photo/Spécimen: ${String(mapped.debtor_photo).trim()}`);
+  const baseNotes = mapped.notes ? String(mapped.notes).trim() : "";
+  n.notes = [baseNotes, ...extraNotes].filter(Boolean).join(" | ") || null;
 
   // Champs PP spécifiques
   n.employer = mapped.employer ? String(mapped.employer).trim() : null;
@@ -535,7 +604,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Parse Excel
+    // 3. Parse Excel (with auto-detection of header row)
     let rawRows: RawRow[];
     let headers: string[];
     try {
@@ -548,11 +617,61 @@ Deno.serve(async (req) => {
       ) || workbook.SheetNames[0];
 
       const sheet = workbook.Sheets[sheetName];
-      rawRows = XLSX.utils.sheet_to_json(sheet, { defval: null });
 
-      if (!rawRows || rawRows.length === 0) throw new Error("Feuille vide");
+      // Read as array of arrays to find the real header row
+      const allRows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+      if (!allRows || allRows.length === 0) throw new Error("Feuille vide");
 
-      headers = Object.keys(rawRows[0]);
+      // Scan the first 15 rows to find the one with the most column matches
+      let bestHeaderRow = 0;
+      let bestMatchCount = 0;
+
+      const scanLimit = Math.min(15, allRows.length);
+      for (let r = 0; r < scanLimit; r++) {
+        const row = allRows[r];
+        if (!row || !Array.isArray(row)) continue;
+        let matchCount = 0;
+        for (const cell of row) {
+          if (cell === null || cell === undefined || String(cell).trim() === "") continue;
+          const normalized = normalizeHeader(String(cell));
+          if (FRENCH_COLUMNS[normalized] !== undefined || matchDynamicHeader(normalized) !== undefined) {
+            matchCount++;
+          }
+        }
+        if (matchCount > bestMatchCount) {
+          bestMatchCount = matchCount;
+          bestHeaderRow = r;
+        }
+      }
+
+      console.log(`Header row detected at index ${bestHeaderRow} with ${bestMatchCount} column matches`);
+
+      // Build rows manually from array data using detected header row
+      const headerRowData = allRows[bestHeaderRow] as unknown[];
+      const headerNames: string[] = headerRowData.map((cell, i) =>
+        cell !== null && cell !== undefined && String(cell).trim() !== ""
+          ? String(cell).trim()
+          : `__col_${i}`
+      );
+
+      rawRows = [];
+      for (let r = bestHeaderRow + 1; r < allRows.length; r++) {
+        const row = allRows[r] as unknown[];
+        if (!row) continue;
+        const obj: RawRow = {};
+        let hasData = false;
+        for (let c = 0; c < headerNames.length; c++) {
+          const val = c < row.length ? row[c] : null;
+          obj[headerNames[c]] = val;
+          if (val !== null && val !== undefined && String(val).trim() !== "") hasData = true;
+        }
+        if (hasData) rawRows.push(obj);
+      }
+
+      if (rawRows.length === 0) throw new Error("Aucune donnée trouvée après la ligne d'en-têtes");
+
+      headers = headerNames.filter((h) => !h.startsWith("__col_"));
+      console.log(`Parsed ${rawRows.length} data rows with headers: ${headers.join(", ")}`);
     } catch (parseErr) {
       await supabase.from("imports").update({ status: "failed", error_message: `Erreur parsing: ${parseErr}` }).eq("id", import_id);
       return new Response(

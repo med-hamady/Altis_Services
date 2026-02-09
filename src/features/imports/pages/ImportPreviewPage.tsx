@@ -453,7 +453,26 @@ function CasePreviewCard({
               </div>
             </div>
 
-            <Field label="Notes" value={String(d.notes ?? '')} fieldKey="notes" />
+            {/* Notes — affichage structuré avec retours à la ligne */}
+            {d.notes && (
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                <div className="space-y-1">
+                  {String(d.notes).split(' | ').map((note: string, idx: number) => (
+                    <p key={idx} className="text-sm text-muted-foreground leading-snug">
+                      {note.includes(':') ? (
+                        <>
+                          <span className="font-medium text-foreground">{note.split(':')[0]}:</span>
+                          {note.substring(note.indexOf(':') + 1)}
+                        </>
+                      ) : (
+                        note
+                      )}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
