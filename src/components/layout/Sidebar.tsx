@@ -11,10 +11,12 @@ import {
   UserCog,
   FileUp,
   Archive,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useAuth } from '@/contexts/AuthContext'
 import { Logo } from '@/components/ui/logo'
+import { Button } from '@/components/ui/button'
 
 interface NavItem {
   title: string
@@ -92,9 +94,10 @@ const navItems: NavItem[] = [
 
 interface SidebarProps {
   onNavigate?: () => void
+  onClose?: () => void
 }
 
-export function Sidebar({ onNavigate }: SidebarProps) {
+export function Sidebar({ onNavigate, onClose }: SidebarProps) {
   const { userType } = useAuth()
 
   const filteredNavItems = navItems.filter((item) => {
@@ -108,9 +111,20 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       className="fixed inset-y-0 left-0 z-50 flex w-64 max-w-[80vw] flex-col border-r bg-card"
       aria-label="Navigation principale"
     >
-      {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center justify-center border-b">
+      {/* Logo + Close button on mobile */}
+      <div className="relative flex h-16 shrink-0 items-center justify-center border-b">
         <Logo size="lg" />
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2"
+            onClick={onClose}
+            aria-label="Fermer le menu"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
