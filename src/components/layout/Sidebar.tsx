@@ -108,7 +108,7 @@ export function Sidebar({ onNavigate, onClose }: SidebarProps) {
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-50 flex w-64 max-w-[80vw] flex-col border-r bg-card"
+      className="flex h-full w-64 max-w-[80vw] flex-col border-r bg-card"
       aria-label="Navigation principale"
     >
       {/* Logo + Close button on mobile */}

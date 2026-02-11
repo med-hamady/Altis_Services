@@ -10,7 +10,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar - Desktop */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block">
         <Sidebar />
       </div>
 
