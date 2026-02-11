@@ -86,7 +86,7 @@ export function AddDebtorPMDialog({ open, onOpenChange, onCreated }: AddDebtorPM
               Informations de l&apos;entreprise
             </h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="company_name"
@@ -122,7 +122,7 @@ export function AddDebtorPMDialog({ open, onOpenChange, onCreated }: AddDebtorPM
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="rc_number"
@@ -167,7 +167,7 @@ export function AddDebtorPMDialog({ open, onOpenChange, onCreated }: AddDebtorPM
               Représentant légal
             </h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="legal_rep_name"
@@ -231,7 +231,7 @@ export function AddDebtorPMDialog({ open, onOpenChange, onCreated }: AddDebtorPM
               Coordonnées
             </h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="phone_primary"
@@ -271,7 +271,7 @@ export function AddDebtorPMDialog({ open, onOpenChange, onCreated }: AddDebtorPM
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -342,7 +342,7 @@ export function AddDebtorPMDialog({ open, onOpenChange, onCreated }: AddDebtorPM
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="address_city"
@@ -411,7 +411,7 @@ export function AddDebtorPMDialog({ open, onOpenChange, onCreated }: AddDebtorPM
               Contact alternatif
             </h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="alt_contact_name"

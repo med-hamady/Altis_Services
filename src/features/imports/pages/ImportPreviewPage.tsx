@@ -695,14 +695,14 @@ export function ImportPreviewPage() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/imports')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Preview import</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Preview import</h1>
+            <p className="text-sm text-muted-foreground truncate">
               {importData.bank?.name} — {importData.file_name || 'fichier.xlsx'}
             </p>
           </div>
@@ -869,11 +869,11 @@ export function ImportPreviewPage() {
 
       {/* Actions */}
       {!isReadOnly && importData.status !== 'approved' && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted-foreground">
             {stats.approved} dossier(s) approuvé(s) sur {rows?.length || 0}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row w-full sm:w-auto">
             <Button variant="outline" onClick={handleApproveAll} disabled={approveAll.isPending}>
               {approveAll.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

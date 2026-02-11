@@ -126,7 +126,7 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
             {/* Identité */}
             <h4 className="text-sm font-semibold text-muted-foreground pt-2">Identité</h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="first_name"
@@ -172,7 +172,7 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="id_type"
@@ -205,7 +205,7 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
             {/* Coordonnées */}
             <h4 className="text-sm font-semibold text-muted-foreground pt-2">Coordonnées</h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="phone_primary"
@@ -272,7 +272,7 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="address_city"
@@ -305,7 +305,7 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
             {/* Emploi */}
             <h4 className="text-sm font-semibold text-muted-foreground pt-2">Emploi</h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="employer"
@@ -338,7 +338,7 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
             {/* Contact alternatif */}
             <h4 className="text-sm font-semibold text-muted-foreground pt-2">Contact alternatif</h4>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="alt_contact_name"

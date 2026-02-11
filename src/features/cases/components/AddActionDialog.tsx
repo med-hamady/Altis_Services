@@ -145,7 +145,7 @@ export function AddActionDialog({ caseId, open, onOpenChange, onCreated, default
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="action_type"
@@ -234,7 +234,7 @@ export function AddActionDialog({ caseId, open, onOpenChange, onCreated, default
             {/* Prochaine action */}
             <div className="border-t pt-4">
               <p className="mb-3 text-sm font-medium text-muted-foreground">Prochaine action (optionnel)</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="next_action_type"
