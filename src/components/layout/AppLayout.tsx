@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { Button } from '@/components/ui/button'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 
@@ -32,6 +34,16 @@ export function AppLayout() {
           )}
         >
           <Sidebar onNavigate={() => setSidebarOpen(false)} />
+          {/* Close button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-3 z-50 h-8 w-8"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Fermer le menu"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
