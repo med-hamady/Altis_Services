@@ -10,7 +10,6 @@ interface BankReportData {
   stats: {
     totalCases: number
     byStatus: Record<string, number>
-    byPriority: Record<string, number>
     totalAmount: number
     totalPrincipal: number
     totalInterest: number

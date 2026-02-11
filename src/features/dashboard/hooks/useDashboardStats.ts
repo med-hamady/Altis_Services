@@ -166,10 +166,12 @@ export function useBankUserStats(bankId: string | null) {
         amount: number
       }
 
-      // Calculer montant total dû
+      // Calculer montant total dû (Math.abs pour gérer les montants négatifs importés)
       const totalDue = (cases as CaseAmount[] || []).reduce((sum, c) => {
-        return sum + (c.amount_principal || 0) + (c.amount_interest || 0) +
-               (c.amount_penalties || 0) + (c.amount_fees || 0)
+        return sum + Math.abs(
+          (c.amount_principal || 0) + (c.amount_interest || 0) +
+          (c.amount_penalties || 0) + (c.amount_fees || 0)
+        )
       }, 0)
 
       // Calculer montant recouvré total

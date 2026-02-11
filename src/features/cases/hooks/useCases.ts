@@ -29,7 +29,42 @@ export function useCases() {
         query = query.eq('bank_id', currentUser.bank_id)
       }
 
+      // Exclure les dossiers clôturés (déplacés vers l'archive)
+      query = query.neq('status', 'closed')
+
       const { data, error } = await query.order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data as Case[]
+    },
+    enabled: !!currentUser,
+  })
+}
+
+// Dossiers clôturés (archive)
+export function useArchivedCases() {
+  const { userType, currentUser } = useAuth()
+
+  return useQuery({
+    queryKey: ['cases', 'archived', userType, currentUser?.id],
+    queryFn: async (): Promise<Case[]> => {
+      let query = supabase
+        .from('cases')
+        .select(`
+          *,
+          bank:banks(*),
+          debtor_pp:debtors_pp(*),
+          debtor_pm:debtors_pm(*),
+          assigned_agent:agents(*)
+        `)
+        .eq('status', 'closed')
+
+      // Bank user : uniquement les dossiers de sa banque
+      if (userType === 'bank_user' && currentUser && 'bank_id' in currentUser) {
+        query = query.eq('bank_id', currentUser.bank_id)
+      }
+
+      const { data, error } = await query.order('closed_at', { ascending: false })
 
       if (error) throw error
       return data as Case[]

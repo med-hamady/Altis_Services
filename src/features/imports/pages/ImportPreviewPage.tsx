@@ -25,6 +25,9 @@ import {
   Shield,
   Briefcase,
   Calendar,
+  FileText,
+  ShieldCheck,
+  ClipboardList,
 } from 'lucide-react'
 import {
   useImport,
@@ -247,6 +250,29 @@ function EditableAmountRow({
 }
 
 // ---------------------------------------------------------------------------
+// IssuesList — affiche erreurs et warnings
+// ---------------------------------------------------------------------------
+function IssuesList({ errors, warnings }: { errors: { field: string; message: string }[]; warnings: { field: string; message: string }[] }) {
+  if (errors.length === 0 && warnings.length === 0) return null
+  return (
+    <div className="mb-4 space-y-1 rounded-md border p-3 bg-background">
+      {errors.map((e, i) => (
+        <p key={`e-${i}`} className="text-xs text-red-600 flex items-center gap-1">
+          <XCircle className="h-3 w-3 shrink-0" />
+          <span className="font-medium">{e.field}:</span> {e.message}
+        </p>
+      ))}
+      {warnings.map((w, i) => (
+        <p key={`w-${i}`} className="text-xs text-yellow-600 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3 shrink-0" />
+          <span className="font-medium">{w.field}:</span> {w.message}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // CasePreviewCard — reproduit le design exact de CaseDetailPage
 // ---------------------------------------------------------------------------
 function CasePreviewCard({
@@ -300,18 +326,21 @@ function CasePreviewCard({
           ? 'bg-green-50/20 dark:bg-green-950/10'
           : ''
 
-  // Helper for editable or read-only
+  // Helper for editable or read-only — masque les champs vides
   const Field = ({
     label,
     value,
     fieldKey,
     icon,
+    alwaysShow = false,
   }: {
     label: string
     value: string | null | undefined
     fieldKey: string
     icon?: React.ComponentType<{ className?: string }>
+    alwaysShow?: boolean
   }) => {
+    if (!alwaysShow && (!value || value === 'null' || value === 'undefined')) return null
     if (isReadOnly || hasErrors) {
       return <InfoRow label={label} value={value} icon={icon} />
     }
@@ -390,17 +419,6 @@ function CasePreviewCard({
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge
-            variant={
-              d.priority === 'high' || d.priority === 'urgent'
-                ? 'destructive'
-                : d.priority === 'low'
-                  ? 'secondary'
-                  : 'default'
-            }
-          >
-            {String(d.priority ?? 'medium')}
-          </Badge>
           {d.treatment_type ? (
             <Badge variant="outline">{String(d.treatment_type)}</Badge>
           ) : null}
@@ -408,22 +426,7 @@ function CasePreviewCard({
       </div>
 
       {/* --- Warnings / Erreurs (au-dessus des cartes) --- */}
-      {((row.errors && row.errors.length > 0) || (row.warnings && row.warnings.length > 0)) && (
-        <div className="mb-4 space-y-1 rounded-md border p-3 bg-background">
-          {row.errors?.map((e, i) => (
-            <p key={`e-${i}`} className="text-xs text-red-600 flex items-center gap-1">
-              <XCircle className="h-3 w-3 shrink-0" />
-              <span className="font-medium">{e.field}:</span> {e.message}
-            </p>
-          ))}
-          {row.warnings?.map((w, i) => (
-            <p key={`w-${i}`} className="text-xs text-yellow-600 flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3 shrink-0" />
-              <span className="font-medium">{w.field}:</span> {w.message}
-            </p>
-          ))}
-        </div>
-      )}
+      <IssuesList errors={row.errors} warnings={row.warnings} />
 
       {/* --- Grille 3 cartes identique à CaseDetailPage --- */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -442,6 +445,7 @@ function CasePreviewCard({
             <Field label="Date de défaut" value={String(d.default_date ?? '')} fieldKey="default_date" icon={Calendar} />
             <Field label="Produit" value={String(d.product_type ?? '')} fieldKey="product_type" />
             <Field label="Réf. contrat" value={String(d.contract_ref ?? '')} fieldKey="contract_ref" />
+            <Field label="Traitement" value={String(d.treatment_type ?? '')} fieldKey="treatment_type" />
 
             {/* Solde restant */}
             <div className="pt-2 border-t">
@@ -453,26 +457,6 @@ function CasePreviewCard({
               </div>
             </div>
 
-            {/* Notes — affichage structuré avec retours à la ligne */}
-            {d.notes && (
-              <div className="pt-2 border-t">
-                <p className="text-xs text-muted-foreground mb-1">Notes</p>
-                <div className="space-y-1">
-                  {String(d.notes).split(' | ').map((note: string, idx: number) => (
-                    <p key={idx} className="text-sm text-muted-foreground leading-snug">
-                      {note.includes(':') ? (
-                        <>
-                          <span className="font-medium text-foreground">{note.split(':')[0]}:</span>
-                          {note.substring(note.indexOf(':') + 1)}
-                        </>
-                      ) : (
-                        note
-                      )}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -503,17 +487,26 @@ function CasePreviewCard({
               </>
             ) : (
               <>
-                <Field label="Nom" value={String(d.debtor_name ?? '')} fieldKey="debtor_name" icon={User} />
+                {/* Photo du débiteur */}
+                {d.photo_url && (
+                  <div className="flex justify-center pb-2">
+                    <img
+                      src={String(d.photo_url)}
+                      alt="Photo du débiteur"
+                      className="h-20 w-20 rounded-full object-cover border-2 border-muted"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  </div>
+                )}
+                <Field label="Nom" value={String(d.debtor_name ?? '')} fieldKey="debtor_name" icon={User} alwaysShow />
                 <Field label="Prénom" value={String(d.debtor_first_name ?? '')} fieldKey="debtor_first_name" />
-                <Field label="Type ID" value={String(d.id_type ?? '')} fieldKey="id_type" icon={Shield} />
                 <Field label="N° ID" value={String(d.id_number ?? '')} fieldKey="id_number" icon={Shield} />
+                <Field label="Type ID" value={String(d.id_type ?? '')} fieldKey="id_type" />
                 <Field label="Tél. principal" value={String(d.phone_1 ?? '')} fieldKey="phone_1" icon={Phone} />
                 <Field label="Tél. secondaire" value={String(d.phone_2 ?? '')} fieldKey="phone_2" icon={Phone} />
                 <Field label="Email" value={String(d.email ?? '')} fieldKey="email" icon={Mail} />
-                <Field label="Adresse" value={String(d.address ?? '')} fieldKey="address" icon={MapPin} />
-                <Field label="Ville" value={String(d.city ?? '')} fieldKey="city" />
-                <Field label="Secteur" value={String(d.sector ?? '')} fieldKey="sector" />
-                <Field label="Région" value={String(d.region ?? '')} fieldKey="region" />
+                <Field label="Pays" value={String(d.city ?? '')} fieldKey="city" icon={MapPin} />
+                <Field label="Adresse" value={String(d.address ?? '')} fieldKey="address" />
                 <Field label="Employeur" value={String(d.employer ?? '')} fieldKey="employer" icon={Briefcase} />
                 <Field label="Profession" value={String(d.occupation ?? '')} fieldKey="occupation" />
               </>
@@ -541,16 +534,48 @@ function CasePreviewCard({
               </div>
             </div>
 
-            {/* Garantie */}
-            <div className="mt-4 pt-3 border-t space-y-1">
-              <Field label="Type garantie" value={String(d.guarantee_type ?? '')} fieldKey="guarantee_type" />
-              <Field label="Description garantie" value={String(d.guarantee_description ?? '')} fieldKey="guarantee_description" />
-            </div>
+            {/* Garantie — masqué si vide */}
+            {!!(d.guarantee_type || d.guarantee_description) && (
+              <div className="mt-4 pt-3 border-t space-y-1">
+                <Field label="Type garantie" value={String(d.guarantee_type ?? '')} fieldKey="guarantee_type" />
+                <Field label="Description garantie" value={String(d.guarantee_description ?? '')} fieldKey="guarantee_description" />
+              </div>
+            )}
 
             <Field label="Devise" value={String(d.currency ?? '')} fieldKey="currency" />
           </CardContent>
         </Card>
       </div>
+
+      {/* Section Notes — sous le grid, pleine largeur */}
+      {!!d.notes && (() => {
+        const noteParts = String(d.notes).split(' | ')
+        const noteConfig: Array<{ icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }> = [
+          { icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200' },
+          { icon: ShieldCheck, color: 'text-amber-600', bgColor: 'bg-amber-50 border-amber-200' },
+          { icon: ClipboardList, color: 'text-emerald-600', bgColor: 'bg-emerald-50 border-emerald-200' },
+        ]
+        return (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {noteParts.map((note: string, idx: number) => {
+              const config = noteConfig[idx % noteConfig.length]
+              const Icon = config.icon
+              const hasLabel = note.includes(':')
+              const label = hasLabel ? note.split(':')[0].trim() : 'Note'
+              const content = hasLabel ? note.substring(note.indexOf(':') + 1).trim() : note
+              return (
+                <div key={idx} className={`rounded-lg border p-3 ${config.bgColor}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon className={`h-4 w-4 ${config.color}`} />
+                    <span className={`text-sm font-semibold ${config.color}`}>{label}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
     </div>
   )
 }
@@ -775,7 +800,6 @@ export function ImportPreviewPage() {
                       <TableHead>Banque</TableHead>
                       <TableHead>Montant total</TableHead>
                       <TableHead>Statut</TableHead>
-                      <TableHead>Priorité</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -795,13 +819,6 @@ export function ImportPreviewPage() {
                           : '—'
 
                       const bank = c.bank as { name?: string } | null
-
-                      const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-                        low: 'secondary',
-                        medium: 'default',
-                        high: 'destructive',
-                        urgent: 'destructive',
-                      }
 
                       return (
                         <TableRow
@@ -833,11 +850,6 @@ export function ImportPreviewPage() {
                           <TableCell>
                             <Badge variant="outline">
                               {String(c.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={priorityColors[String(c.priority ?? 'medium')] || 'default'}>
-                              {String(c.priority)}
                             </Badge>
                           </TableCell>
                         </TableRow>

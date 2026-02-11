@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select'
 import { Upload, X, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { usePermissions } from '@/contexts/AuthContext'
 import { useCreatePayment } from '../hooks/useCaseDetail'
 
 const PAYMENT_METHODS = [
@@ -55,6 +56,7 @@ interface AddPaymentDialogProps {
 
 export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance }: AddPaymentDialogProps) {
   const createPayment = useCreatePayment()
+  const { isAdmin } = usePermissions()
   const [serverError, setServerError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -139,8 +141,13 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance 
         payment_method: data.payment_method || undefined,
         transaction_reference: data.transaction_reference || undefined,
         receipt_path: receiptPath,
+        isAdmin,
       })
-      toast.success('Paiement déclaré avec succès (en attente de validation)')
+      toast.success(
+        isAdmin
+          ? 'Paiement déclaré et validé avec succès'
+          : 'Paiement déclaré avec succès (en attente de validation)'
+      )
       onOpenChange(false)
       form.reset()
     } catch (error: unknown) {
@@ -163,9 +170,11 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance 
         <DialogHeader>
           <DialogTitle>Déclarer un paiement</DialogTitle>
           <DialogDescription>
-            Déclarer un paiement reçu du débiteur (sera soumis à validation)
-            {remainingBalance != null && remainingBalance > 0 && (
-              <span className="block mt-1 font-medium">
+            {isAdmin
+              ? 'Déclarer un paiement reçu du débiteur (validé automatiquement)'
+              : 'Déclarer un paiement reçu du débiteur (sera soumis à validation)'}
+            {remainingBalance != null && (
+              <span className={`block mt-1 font-medium ${remainingBalance <= 0 ? 'text-green-600' : ''}`}>
                 Solde restant : {formatMRU(remainingBalance)}
               </span>
             )}
@@ -183,7 +192,7 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance 
                   validate: (v) => {
                     const num = parseFloat(v)
                     if (isNaN(num) || num <= 0) return 'Montant invalide'
-                    if (remainingBalance != null && num > remainingBalance) {
+                    if (remainingBalance != null && remainingBalance > 0 && num > remainingBalance) {
                       return `Le montant ne peut pas dépasser le solde restant (${formatMRU(remainingBalance)})`
                     }
                     return true

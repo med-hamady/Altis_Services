@@ -266,6 +266,7 @@ Deno.serve(async (req) => {
                 address_region: data.sector || data.region || null,
                 employer: data.employer || null,
                 occupation: data.occupation || null,
+                photo_url: data.photo_url || null,
                 notes: data.notes || null,
               })
               .select("id")

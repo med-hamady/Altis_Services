@@ -6,6 +6,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -297,6 +298,420 @@ function matchDynamicHeader(normalizedHeader: string): string | undefined {
 }
 
 // =============================================================================
+// XLSX Image Extraction (from ZIP structure)
+// =============================================================================
+
+interface ImageAnchor {
+  row: number;       // absolute 0-indexed row in sheet
+  col: number;       // absolute 0-indexed col in sheet
+  rId: string;       // relationship ID for the image
+  imagePath: string; // resolved path in ZIP (e.g., xl/media/image1.png)
+}
+
+interface ExtractedImage {
+  dataRowIndex: number;
+  imageData: Uint8Array;
+  extension: string;
+  mimeType: string;
+}
+
+/**
+ * Find the drawing XML path that belongs to a specific sheet.
+ * Traces: workbook.xml → sheet rId → sheet file → sheet rels → drawing path
+ */
+async function findDrawingForSheet(
+  zip: JSZip,
+  sheetName: string,
+): Promise<string | null> {
+  try {
+    // 1. Parse workbook.xml to find the sheet's relationship ID
+    const workbookFile = zip.file("xl/workbook.xml");
+    const workbookRelsFile = zip.file("xl/_rels/workbook.xml.rels");
+    if (!workbookFile || !workbookRelsFile) {
+      console.log("[IMG] Missing workbook.xml or its rels file");
+      return null;
+    }
+
+    const workbookXml = await workbookFile.async("string");
+    const workbookRelsXml = await workbookRelsFile.async("string");
+
+    // Extract all <sheet> elements with their name and r:id
+    // Handle any attribute order: name="..." r:id="..." or r:id="..." name="..."
+    const sheetElements = workbookXml.match(/<sheet\b[^>]*?\/>/gi) || [];
+    let sheetRId: string | null = null;
+
+    for (const el of sheetElements) {
+      const nameMatch = el.match(/name="([^"]+)"/i);
+      const ridMatch = el.match(/(?:r:id|r:Id)="([^"]+)"/i);
+      if (nameMatch && ridMatch) {
+        if (nameMatch[1].toLowerCase().trim() === sheetName.toLowerCase().trim()) {
+          sheetRId = ridMatch[1];
+          break;
+        }
+      }
+    }
+
+    if (!sheetRId) {
+      console.log(`[IMG] Could not find rId for sheet "${sheetName}" in workbook.xml`);
+      console.log(`[IMG] Available sheets: ${sheetElements.map(el => {
+        const m = el.match(/name="([^"]+)"/i);
+        return m ? m[1] : "?";
+      }).join(", ")}`);
+      return null;
+    }
+
+    console.log(`[IMG] Sheet "${sheetName}" → rId: ${sheetRId}`);
+
+    // 2. Find the sheet file path from workbook.xml.rels
+    const relElements = workbookRelsXml.match(/<Relationship\b[^>]*?\/>/gi) || [];
+    let sheetFilePath: string | null = null;
+
+    for (const el of relElements) {
+      const idMatch = el.match(/Id="([^"]+)"/i);
+      const targetMatch = el.match(/Target="([^"]+)"/i);
+      if (idMatch && targetMatch && idMatch[1] === sheetRId) {
+        sheetFilePath = targetMatch[1];
+        break;
+      }
+    }
+
+    if (!sheetFilePath) {
+      console.log(`[IMG] Could not resolve sheet file for rId ${sheetRId}`);
+      return null;
+    }
+
+    // Normalize path: worksheets/sheet1.xml → xl/worksheets/sheet1.xml
+    const fullSheetPath = sheetFilePath.startsWith("xl/") ? sheetFilePath : `xl/${sheetFilePath}`;
+    console.log(`[IMG] Sheet file: ${fullSheetPath}`);
+
+    // 3. Find the drawing reference in the sheet's .rels file
+    // xl/worksheets/sheet1.xml → xl/worksheets/_rels/sheet1.xml.rels
+    const pathParts = fullSheetPath.match(/^(.*)\/([^/]+)$/);
+    if (!pathParts) return null;
+
+    const sheetRelsPath = `${pathParts[1]}/_rels/${pathParts[2]}.rels`;
+    const sheetRelsFile = zip.file(sheetRelsPath);
+
+    if (!sheetRelsFile) {
+      console.log(`[IMG] No rels file for sheet: ${sheetRelsPath}`);
+      return null;
+    }
+
+    const sheetRelsXml = await sheetRelsFile.async("string");
+    const sheetRelElements = sheetRelsXml.match(/<Relationship\b[^>]*?\/>/gi) || [];
+    let drawingTarget: string | null = null;
+
+    for (const el of sheetRelElements) {
+      const typeMatch = el.match(/Type="([^"]+)"/i);
+      const targetMatch = el.match(/Target="([^"]+)"/i);
+      if (typeMatch && targetMatch && /drawing/i.test(typeMatch[1])) {
+        drawingTarget = targetMatch[1];
+        break;
+      }
+    }
+
+    if (!drawingTarget) {
+      console.log("[IMG] No drawing relationship found in sheet rels");
+      return null;
+    }
+
+    // Resolve relative path: ../drawings/drawing1.xml → xl/drawings/drawing1.xml
+    let drawingPath: string;
+    if (drawingTarget.startsWith("../")) {
+      drawingPath = "xl/" + drawingTarget.slice(3);
+    } else if (drawingTarget.startsWith("/")) {
+      drawingPath = drawingTarget.slice(1);
+    } else {
+      drawingPath = `${pathParts[1]}/${drawingTarget}`;
+    }
+
+    console.log(`[IMG] Drawing path for sheet: ${drawingPath}`);
+    return drawingPath;
+
+  } catch (err) {
+    console.error("[IMG] Error finding drawing for sheet:", err);
+    return null;
+  }
+}
+
+/**
+ * Parse a drawing XML + its rels to extract all image anchors with positions.
+ */
+async function parseDrawingAnchors(
+  zip: JSZip,
+  drawingPath: string,
+): Promise<ImageAnchor[]> {
+  const anchors: ImageAnchor[] = [];
+
+  // Parse the drawing relationships file to map rId → image file path
+  const pathParts = drawingPath.match(/^(.*)\/([^/]+)$/);
+  if (!pathParts) return anchors;
+
+  const relsPath = `${pathParts[1]}/_rels/${pathParts[2]}.rels`;
+  const relsFile = zip.file(relsPath);
+  if (!relsFile) {
+    console.log(`[IMG] No rels file: ${relsPath}`);
+    return anchors;
+  }
+
+  const relsXml = await relsFile.async("string");
+
+  // Build rId → image path map from all Relationship elements
+  const rIdToFile = new Map<string, string>();
+  const relElements = relsXml.match(/<Relationship\b[^>]*?\/>/gi) || [];
+
+  for (const el of relElements) {
+    const idMatch = el.match(/Id="([^"]+)"/i);
+    const targetMatch = el.match(/Target="([^"]+)"/i);
+    const typeMatch = el.match(/Type="([^"]+)"/i);
+    if (!idMatch || !targetMatch) continue;
+
+    // Only include image relationships
+    const isImage = typeMatch && /image/i.test(typeMatch[1]);
+    const isMediaTarget = /media\//i.test(targetMatch[1]);
+    if (!isImage && !isMediaTarget) continue;
+
+    const target = targetMatch[1];
+    const resolvedPath = target.startsWith("../")
+      ? "xl/" + target.slice(3)
+      : target.startsWith("/") ? target.slice(1) : target;
+    rIdToFile.set(idMatch[1], resolvedPath);
+  }
+
+  console.log(`[IMG] Drawing ${drawingPath}: ${rIdToFile.size} image relationships`);
+  for (const [rId, path] of rIdToFile) {
+    console.log(`[IMG]   ${rId} → ${path}`);
+  }
+
+  // Parse the drawing XML
+  const drawingFile = zip.file(drawingPath);
+  if (!drawingFile) {
+    console.log(`[IMG] Drawing file not found: ${drawingPath}`);
+    return anchors;
+  }
+
+  const drawingXml = await drawingFile.async("string");
+
+  // Extract all anchors (oneCellAnchor and twoCellAnchor)
+  const anchorRegex = /<(?:xdr:)?(?:oneCellAnchor|twoCellAnchor)\b[^>]*>([\s\S]*?)<\/(?:xdr:)?(?:oneCellAnchor|twoCellAnchor)>/gi;
+  let anchorMatch: RegExpExecArray | null;
+
+  while ((anchorMatch = anchorRegex.exec(drawingXml)) !== null) {
+    const anchorContent = anchorMatch[1];
+
+    // Extract <xdr:from> row and col
+    const fromMatch = anchorContent.match(
+      /<(?:xdr:)?from>\s*<(?:xdr:)?col>(\d+)<\/(?:xdr:)?col>[\s\S]*?<(?:xdr:)?row>(\d+)<\/(?:xdr:)?row>[\s\S]*?<\/(?:xdr:)?from>/i,
+    );
+    if (!fromMatch) continue;
+
+    const col = parseInt(fromMatch[1], 10);
+    const row = parseInt(fromMatch[2], 10);
+
+    // Extract r:embed from blip
+    const blipMatch = anchorContent.match(
+      /<(?:a:)?blip[^>]*?(?:r:embed|embed)="([^"]+)"/i,
+    );
+    if (!blipMatch) continue;
+
+    const rId = blipMatch[1];
+    const imagePath = rIdToFile.get(rId);
+    if (!imagePath) {
+      console.log(`[IMG] Could not resolve rId ${rId} at row=${row} col=${col}`);
+      continue;
+    }
+
+    anchors.push({ row, col, rId, imagePath });
+  }
+
+  console.log(`[IMG] Found ${anchors.length} image anchors in drawing`);
+  for (const a of anchors) {
+    console.log(`[IMG]   row=${a.row} col=${a.col} rId=${a.rId} → ${a.imagePath}`);
+  }
+
+  return anchors;
+}
+
+const MIME_MAP: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  bmp: "image/bmp",
+  webp: "image/webp",
+  emf: "image/x-emf",
+  wmf: "image/x-wmf",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+};
+
+/**
+ * Extract embedded images from XLSX for a specific sheet and photo column.
+ *
+ * Strategy:
+ * 1. Find the correct drawing for the target sheet (not all drawings)
+ * 2. Parse all image anchors from that drawing
+ * 3. Filter images that are in/near the photo column (±2 cols tolerance)
+ * 4. Calculate dataRowIndex for each image
+ * 5. If no images match the photo column, fall back to ALL images sorted by row
+ */
+async function extractImagesFromXLSX(
+  xlsxBuffer: ArrayBuffer,
+  photoColumnIndex: number,
+  headerRowIndex: number,
+  sheetName: string,
+): Promise<ExtractedImage[]> {
+  try {
+    const zip = await JSZip.loadAsync(xlsxBuffer);
+
+    // Step 1: Find the drawing for our specific sheet
+    let drawingPath = await findDrawingForSheet(zip, sheetName);
+
+    // Fallback: if sheet-specific lookup fails, try all drawings
+    if (!drawingPath) {
+      console.log("[IMG] Falling back to scanning all drawing files...");
+      const allDrawings: string[] = [];
+      zip.forEach((path: string) => {
+        if (/^xl\/drawings\/drawing\d+\.xml$/i.test(path)) {
+          allDrawings.push(path);
+        }
+      });
+      if (allDrawings.length === 1) {
+        drawingPath = allDrawings[0];
+        console.log(`[IMG] Using single drawing found: ${drawingPath}`);
+      } else if (allDrawings.length > 1) {
+        drawingPath = allDrawings[0];
+        console.log(`[IMG] WARNING: Multiple drawings found (${allDrawings.length}), using first: ${drawingPath}`);
+      } else {
+        console.log("[IMG] No drawing files found — no embedded images");
+        return [];
+      }
+    }
+
+    // Step 2: Parse all image anchors from the drawing
+    const allAnchors = await parseDrawingAnchors(zip, drawingPath);
+    if (allAnchors.length === 0) {
+      console.log("[IMG] No image anchors found in drawing");
+      return [];
+    }
+
+    // Step 3: Filter by photo column (with ±2 tolerance)
+    const COL_TOLERANCE = 2;
+    let photoAnchors = allAnchors.filter(
+      (a) => Math.abs(a.col - photoColumnIndex) <= COL_TOLERANCE
+    );
+
+    console.log(`[IMG] Photo column index: ${photoColumnIndex}, anchors within ±${COL_TOLERANCE}: ${photoAnchors.length}`);
+
+    // If no images near the photo column, use ALL images as fallback
+    if (photoAnchors.length === 0) {
+      console.log("[IMG] FALLBACK: No images near photo column, using ALL images");
+      photoAnchors = allAnchors;
+    }
+
+    // Step 4: Sort by row position (ascending) and extract image data
+    photoAnchors.sort((a, b) => a.row - b.row);
+
+    const images: ExtractedImage[] = [];
+    for (const anchor of photoAnchors) {
+      const dataRowIndex = anchor.row - headerRowIndex - 1;
+      if (dataRowIndex < 0) {
+        console.log(`[IMG] Skipping image at row ${anchor.row} (above data rows, header at ${headerRowIndex})`);
+        continue;
+      }
+
+      const imageFile = zip.file(anchor.imagePath);
+      if (!imageFile) {
+        console.log(`[IMG] Image file not found in ZIP: ${anchor.imagePath}`);
+        continue;
+      }
+
+      const imageData = await imageFile.async("uint8array");
+      const ext = anchor.imagePath.split(".").pop()?.toLowerCase() || "png";
+
+      images.push({
+        dataRowIndex,
+        imageData,
+        extension: ext === "jpg" ? "jpeg" : ext,
+        mimeType: MIME_MAP[ext] || "image/png",
+      });
+
+      console.log(`[IMG] Image: row=${anchor.row} col=${anchor.col} → dataRowIndex=${dataRowIndex} file=${anchor.imagePath} (${imageData.length} bytes)`);
+    }
+
+    console.log(`[IMG] Total extracted images: ${images.length}`);
+    return images;
+  } catch (err) {
+    console.error("[IMG] Error extracting images from XLSX:", err);
+    return [];
+  }
+}
+
+/**
+ * Upload extracted images to Supabase Storage and return:
+ * - positionMap: dataRowIndex → publicUrl (for position-based matching)
+ * - orderedUrls: array of publicUrls sorted by image row position (for order-based fallback)
+ */
+async function uploadImagesToStorage(
+  supabase: ReturnType<typeof createClient>,
+  importId: string,
+  images: ExtractedImage[],
+): Promise<{ positionMap: Map<number, string>; orderedUrls: string[] }> {
+  const positionMap = new Map<number, string>();
+  const orderedResults: { dataRowIndex: number; url: string }[] = [];
+
+  // Upload sequentially to maintain order and avoid race conditions
+  for (const img of images) {
+    const filePath = `${importId}/row_${img.dataRowIndex + 1}.${img.extension}`;
+    try {
+      const { error } = await supabase.storage
+        .from("debtor-photos")
+        .upload(filePath, img.imageData, {
+          contentType: img.mimeType,
+          upsert: true,
+        });
+
+      if (error) {
+        console.error(`[IMG] Upload failed for dataRowIndex ${img.dataRowIndex}: ${error.message}`);
+        continue;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("debtor-photos")
+        .getPublicUrl(filePath);
+
+      if (urlData?.publicUrl) {
+        positionMap.set(img.dataRowIndex, urlData.publicUrl);
+        orderedResults.push({ dataRowIndex: img.dataRowIndex, url: urlData.publicUrl });
+        console.log(`[IMG] Uploaded dataRowIndex=${img.dataRowIndex}: ${urlData.publicUrl}`);
+      }
+    } catch (err) {
+      console.error(`[IMG] Upload error for dataRowIndex ${img.dataRowIndex}:`, err);
+    }
+  }
+
+  // orderedUrls is sorted by dataRowIndex (images are already sorted by row from extraction)
+  orderedResults.sort((a, b) => a.dataRowIndex - b.dataRowIndex);
+  const orderedUrls = orderedResults.map((r) => r.url);
+
+  console.log(`[IMG] Upload complete: ${positionMap.size} images uploaded, orderedUrls: ${orderedUrls.length}`);
+  return { positionMap, orderedUrls };
+}
+
+/**
+ * Find the column index of the photo column in the header row.
+ */
+function findPhotoColumnIndex(headerRow: unknown[]): number {
+  for (let i = 0; i < headerRow.length; i++) {
+    const cell = headerRow[i];
+    if (cell === null || cell === undefined) continue;
+    const normalized = normalizeHeader(String(cell));
+    if (FRENCH_COLUMNS[normalized] === "debtor_photo") return i;
+  }
+  return -1;
+}
+
+// =============================================================================
 // Detect format
 // =============================================================================
 
@@ -380,14 +795,12 @@ function validateRow(
   const warnings: ValidationIssue[] = [];
 
   // --- Required fields ---
-  // debtor_type: optionnel, défaut "pp" si absent
+  // debtor_type: optionnel, défaut "pp" si absent (pas de warning)
   if (row.debtor_type) {
     const dt = normalizeDebtorType(row.debtor_type);
     if (!dt) {
       errors.push({ field: "debtor_type", message: `Type débiteur invalide: ${row.debtor_type} (attendu PP ou PM)` });
     }
-  } else {
-    warnings.push({ field: "debtor_type", message: "Type débiteur absent, défaut PP appliqué" });
   }
 
   // Nom requis (erreur bloquante)
@@ -400,8 +813,9 @@ function validateRow(
     warnings.push({ field: "phone_1", message: "Téléphone principal manquant" });
   }
 
-  // Réf contrat : warning si absent (pas bloquant)
-  if (!row.contract_ref) {
+  // Réf contrat : warning seulement pour PM (PP n'a pas de contrat)
+  const detectedType = normalizeDebtorType(row.debtor_type) || "pp";
+  if (!row.contract_ref && detectedType === "pm") {
     warnings.push({ field: "contract_ref", message: "Réf. contrat manquante" });
   }
 
@@ -418,7 +832,6 @@ function validateRow(
   } else if (row.amount_principal) {
     const amt = parseAmount(row.amount_principal);
     if (amt === null) errors.push({ field: "amount_principal", message: "Montant principal non numérique" });
-    else if (amt < 0) errors.push({ field: "amount_principal", message: "Montant principal négatif" });
   }
 
   // --- Optional amounts ---
@@ -469,6 +882,22 @@ function validateRow(
 }
 
 // =============================================================================
+// Summary/total row detection — skip rows like "TOTAL ENCOURS EX STAFFS"
+// =============================================================================
+
+const SUMMARY_KEYWORDS = [
+  "total", "sous-total", "sous total", "sub-total", "subtotal",
+  "somme", "grand total", "recap", "recapitulatif",
+];
+
+function isSummaryRow(mapped: RawRow): boolean {
+  const name = mapped.debtor_name ? String(mapped.debtor_name).trim().toLowerCase() : "";
+  if (!name) return false;
+  // Check if the name starts with or contains a summary keyword
+  return SUMMARY_KEYWORDS.some((kw) => name.startsWith(kw) || name.includes(kw));
+}
+
+// =============================================================================
 // Normalization
 // =============================================================================
 
@@ -506,7 +935,7 @@ function normalizeRow(mapped: RawRow): NormalizedRow {
   if (mapped.loan_nature) extraNotes.push(`Nature du Prêt: ${String(mapped.loan_nature).trim()}`);
   if (mapped.guarantee_nature) extraNotes.push(`Garantie: ${String(mapped.guarantee_nature).trim()}`);
   if (mapped.recovery_steps) extraNotes.push(`Démarches: ${String(mapped.recovery_steps).trim()}`);
-  if (mapped.debtor_photo) extraNotes.push(`Photo/Spécimen: ${String(mapped.debtor_photo).trim()}`);
+  // debtor_photo → champ dédié photo_url (pas dans les notes)
   const baseNotes = mapped.notes ? String(mapped.notes).trim() : "";
   n.notes = [baseNotes, ...extraNotes].filter(Boolean).join(" | ") || null;
 
@@ -516,6 +945,10 @@ function normalizeRow(mapped: RawRow): NormalizedRow {
   n.id_type = mapped.id_type ? String(mapped.id_type).trim() : null;
   n.id_number = mapped.id_number ? String(mapped.id_number).trim() : null;
   n.sector_activity = mapped.sector_activity ? String(mapped.sector_activity).trim() : null;
+  // Only use cell text as photo_url if it looks like a real URL
+  // (embedded images are extracted separately and injected after normalization)
+  const rawPhoto = mapped.debtor_photo ? String(mapped.debtor_photo).trim() : "";
+  n.photo_url = rawPhoto.startsWith("http://") || rawPhoto.startsWith("https://") ? rawPhoto : null;
 
   // Legacy fields fallback
   n.bank_reference = mapped.bank_reference ? String(mapped.bank_reference).trim() : null;
@@ -606,24 +1039,36 @@ Deno.serve(async (req) => {
 
     // 3. Parse Excel (with auto-detection of header row)
     let rawRows: RawRow[];
+    let rawRowExcelOffsets: number[] = []; // Excel row offset from header for each rawRow
     let headers: string[];
+    let arrayBuffer: ArrayBuffer;
+    let bestHeaderRow = 0;
+    let absoluteHeaderRow = 0; // Absolute 0-indexed row in the sheet (for drawing XML matching)
+    let headerRowData: unknown[] = [];
+    let sheetName = ""; // Will be set during parsing, needed for image extraction
     try {
-      const arrayBuffer = await fileData.arrayBuffer();
+      arrayBuffer = await fileData.arrayBuffer();
       const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
 
       // Must have sheet "Dossiers" (case-insensitive)
-      const sheetName = workbook.SheetNames.find(
+      sheetName = workbook.SheetNames.find(
         (n: string) => n.toLowerCase().replace(/\s/g, "") === "dossiers"
       ) || workbook.SheetNames[0];
 
       const sheet = workbook.Sheets[sheetName];
+
+      // Determine the starting row of the sheet's data range (!ref)
+      // allRows[0] corresponds to this row, NOT necessarily row 0 of the sheet
+      const sheetRef = sheet["!ref"] || "A1";
+      const refRowMatch = sheetRef.match(/^[A-Z]+(\d+)/i);
+      const sheetStartRow = refRowMatch ? parseInt(refRowMatch[1], 10) - 1 : 0; // Convert to 0-indexed
+      console.log(`[PARSE] Sheet "${sheetName}" !ref="${sheetRef}", startRow=${sheetStartRow} (0-indexed)`);
 
       // Read as array of arrays to find the real header row
       const allRows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
       if (!allRows || allRows.length === 0) throw new Error("Feuille vide");
 
       // Scan the first 15 rows to find the one with the most column matches
-      let bestHeaderRow = 0;
       let bestMatchCount = 0;
 
       const scanLimit = Math.min(15, allRows.length);
@@ -644,10 +1089,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`Header row detected at index ${bestHeaderRow} with ${bestMatchCount} column matches`);
+      // Calculate absolute header row for image extraction
+      absoluteHeaderRow = bestHeaderRow + sheetStartRow;
+      console.log(`[PARSE] Header row: allRows index=${bestHeaderRow}, absolute sheet row=${absoluteHeaderRow} (0-indexed), matches=${bestMatchCount}`);
 
       // Build rows manually from array data using detected header row
-      const headerRowData = allRows[bestHeaderRow] as unknown[];
+      headerRowData = allRows[bestHeaderRow] as unknown[];
       const headerNames: string[] = headerRowData.map((cell, i) =>
         cell !== null && cell !== undefined && String(cell).trim() !== ""
           ? String(cell).trim()
@@ -655,6 +1102,7 @@ Deno.serve(async (req) => {
       );
 
       rawRows = [];
+      rawRowExcelOffsets = [];
       for (let r = bestHeaderRow + 1; r < allRows.length; r++) {
         const row = allRows[r] as unknown[];
         if (!row) continue;
@@ -665,7 +1113,10 @@ Deno.serve(async (req) => {
           obj[headerNames[c]] = val;
           if (val !== null && val !== undefined && String(val).trim() !== "") hasData = true;
         }
-        if (hasData) rawRows.push(obj);
+        if (hasData) {
+          rawRows.push(obj);
+          rawRowExcelOffsets.push(r - bestHeaderRow - 1); // dataRowIndex matching image anchors
+        }
       }
 
       if (rawRows.length === 0) throw new Error("Aucune donnée trouvée après la ligne d'en-têtes");
@@ -705,18 +1156,101 @@ Deno.serve(async (req) => {
       bankColumnWarning = `Colonne "Banque" ignorée — toutes les lignes sont rattachées à "${selectedBankName}"`;
     }
 
-    // 6. Map and process each row
-    const mappedRows: RawRow[] = rawRows.map((raw) => mapColumns(raw, format));
+    // 5b. Extract embedded images from XLSX and upload to storage
+    let photoUrlMap = new Map<number, string>();
+    let photoOrderedUrls: string[] = [];
+    const photoColumnIndex = findPhotoColumnIndex(headerRowData);
+    if (photoColumnIndex >= 0) {
+      console.log(`[IMG] Photo column found at index ${photoColumnIndex}, extracting embedded images (absoluteHeaderRow=${absoluteHeaderRow})...`);
+      const extractedImages = await extractImagesFromXLSX(arrayBuffer, photoColumnIndex, absoluteHeaderRow, sheetName);
+      if (extractedImages.length > 0) {
+        console.log(`[IMG] Found ${extractedImages.length} embedded images, uploading to storage...`);
+        const uploadResult = await uploadImagesToStorage(supabase, import_id, extractedImages);
+        photoUrlMap = uploadResult.positionMap;
+        photoOrderedUrls = uploadResult.orderedUrls;
+        console.log(`[IMG] Upload done: ${photoUrlMap.size} position-mapped, ${photoOrderedUrls.length} ordered`);
+      } else {
+        console.log("[IMG] No embedded images found");
+      }
+    } else {
+      console.log("[IMG] No photo column detected in headers");
+    }
+
+    // 6. Map and process each row (filter out summary/total rows)
+    const allMappedRows: RawRow[] = rawRows.map((raw) => mapColumns(raw, format));
+
+    // Filter out summary rows (e.g. "TOTAL ENCOURS EX STAFFS")
+    const filteredIndices: number[] = [];
+    const mappedRows: RawRow[] = [];
+    for (let i = 0; i < allMappedRows.length; i++) {
+      if (isSummaryRow(allMappedRows[i])) {
+        console.log(`Skipping summary row ${i + 1}: "${allMappedRows[i].debtor_name}"`);
+        continue;
+      }
+      filteredIndices.push(i);
+      mappedRows.push(allMappedRows[i]);
+    }
+
     const processedRows: ProcessedRow[] = [];
+
+    // Determine photo matching strategy:
+    // 1. Try position-based matching (using rawRowExcelOffsets → photoUrlMap)
+    // 2. If position-based yields 0 matches, fall back to order-based (sequential assignment)
+    let positionMatchCount = 0;
+    if (photoUrlMap.size > 0) {
+      // Debug: log all photoUrlMap keys and first few rawRowExcelOffsets
+      const mapKeys = [...photoUrlMap.keys()].sort((a, b) => a - b);
+      console.log(`[IMG] photoUrlMap keys (dataRowIndices): [${mapKeys.join(", ")}]`);
+      console.log(`[IMG] rawRowExcelOffsets (first 10): [${rawRowExcelOffsets.slice(0, 10).join(", ")}]`);
+
+      for (let i = 0; i < mappedRows.length; i++) {
+        const originalIndex = filteredIndices[i];
+        const excelRowOffset = rawRowExcelOffsets[originalIndex];
+        if (excelRowOffset !== undefined && photoUrlMap.has(excelRowOffset)) {
+          positionMatchCount++;
+        }
+      }
+      console.log(`[IMG] Position-based matching: ${positionMatchCount}/${mappedRows.length} rows have a photo`);
+    }
+
+    const useOrderFallback = photoUrlMap.size > 0 && positionMatchCount === 0 && photoOrderedUrls.length > 0;
+    if (useOrderFallback) {
+      console.log(`[IMG] FALLBACK: Position matching yielded 0 results. Using ORDER-BASED matching (${photoOrderedUrls.length} images → ${mappedRows.length} rows)`);
+    }
+
+    let orderPhotoIndex = 0; // Counter for order-based fallback
 
     for (let i = 0; i < mappedRows.length; i++) {
       const mapped = mappedRows[i];
+      const originalIndex = filteredIndices[i];
       const { errors, warnings } = validateRow(mapped, mappedRows, i);
       const normalized = normalizeRow(mapped);
 
+      // Inject photo URL from extracted images
+      if (photoUrlMap.size > 0) {
+        const debtorLabel = `${normalized.debtor_name || "?"} ${normalized.debtor_first_name || ""}`.trim();
+        if (useOrderFallback) {
+          // Order-based: assign photos sequentially to data rows
+          if (orderPhotoIndex < photoOrderedUrls.length) {
+            normalized.photo_url = photoOrderedUrls[orderPhotoIndex];
+            console.log(`[IMG] Order-based: row ${i} "${debtorLabel}" → photo ${orderPhotoIndex}`);
+            orderPhotoIndex++;
+          }
+        } else {
+          // Position-based: match by Excel row offset
+          const excelRowOffset = rawRowExcelOffsets[originalIndex];
+          if (excelRowOffset !== undefined && photoUrlMap.has(excelRowOffset)) {
+            normalized.photo_url = photoUrlMap.get(excelRowOffset)!;
+            console.log(`[IMG] Position-based: row ${i} "${debtorLabel}" (origIdx=${originalIndex}, excelOffset=${excelRowOffset}) → photo found`);
+          } else {
+            console.log(`[IMG] Position-based: row ${i} "${debtorLabel}" (origIdx=${originalIndex}, excelOffset=${excelRowOffset}) → NO photo`);
+          }
+        }
+      }
+
       // Check bank column consistency if present
       if (hasBankColumn && selectedBankName) {
-        const rawBankValue = extractBankValue(rawRows[i]);
+        const rawBankValue = extractBankValue(rawRows[originalIndex]);
         if (rawBankValue && rawBankValue.toLowerCase() !== selectedBankName.toLowerCase()) {
           errors.push({
             field: "banque",
@@ -726,7 +1260,7 @@ Deno.serve(async (req) => {
       }
 
       processedRows.push({
-        raw_json: { ...rawRows[i], _bank_id: selectedBankId },
+        raw_json: { ...rawRows[originalIndex], _bank_id: selectedBankId },
         proposed_json: normalized,
         errors,
         warnings,

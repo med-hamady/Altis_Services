@@ -10,6 +10,7 @@ import {
   ClipboardList,
   UserCog,
   FileUp,
+  Archive,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useAuth } from '@/contexts/AuthContext'
@@ -51,6 +52,12 @@ const navItems: NavItem[] = [
     href: '/cases',
     icon: ClipboardList,
     roles: ['agent'],
+  },
+  {
+    title: 'Archive',
+    href: '/archive',
+    icon: Archive,
+    roles: ['admin', 'bank_user'],
   },
   {
     title: 'Débiteurs',

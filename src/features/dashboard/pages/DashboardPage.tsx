@@ -180,7 +180,7 @@ export function DashboardPage() {
             isLoading={isLoading}
           />
           <StatCard
-            title="Clos ce mois"
+            title="Clôturés ce mois"
             value={agentStats?.closedThisMonth || 0}
             description="Dossiers résolus"
             icon={CheckCircle}

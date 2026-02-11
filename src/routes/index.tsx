@@ -18,6 +18,7 @@ import { UsersListPage } from '@/features/users/pages/UsersListPage'
 // Pages des dossiers
 import { CasesListPage } from '@/features/cases/pages/CasesListPage'
 import { CaseDetailPage } from '@/features/cases/pages/CaseDetailPage'
+import { ArchivePage } from '@/features/cases/pages/ArchivePage'
 
 // Pages des débiteurs
 import { DebtorsBankSelectionPage } from '@/features/debtors/pages/DebtorsBankSelectionPage'
@@ -76,6 +77,10 @@ export const router = createBrowserRouter([
       {
         path: 'my-cases',
         element: <CasesListPage />, // Même composant, filtré par agent
+      },
+      {
+        path: 'archive',
+        element: <RoleGuard allowedRoles={['admin', 'bank_user']}><ArchivePage /></RoleGuard>,
       },
       {
         path: 'debtors',

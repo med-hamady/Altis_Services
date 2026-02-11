@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +23,9 @@ import {
   Briefcase,
   Calendar,
   Shield,
+  ShieldCheck,
   FileText,
+  ClipboardList,
   MessageSquare,
   CreditCard,
   FolderKanban,
@@ -32,9 +34,21 @@ import {
   Clock,
   Ban,
   Zap,
+  Check,
+  XCircle,
 } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { usePermissions } from '@/contexts/AuthContext'
-import { useCaseDetail, useCaseActions, useCasePromises, useCasePayments, useCaseDocuments } from '../hooks/useCaseDetail'
+import { useCaseDetail, useCaseActions, useCasePromises, useCasePayments, useCaseDocuments, useValidatePayment } from '../hooks/useCaseDetail'
 import { AssignAgentDialog } from '../components/AssignAgentDialog'
 import { AddActionDialog } from '../components/AddActionDialog'
 import type { ActionDialogResult } from '../components/AddActionDialog'
@@ -43,7 +57,6 @@ import { AddPaymentDialog } from '../components/AddPaymentDialog'
 import { ActionResult, ActionType } from '@/types/enums'
 import {
   CaseStatusLabels,
-  CasePriorityLabels,
   CasePhaseLabels,
   ActionTypeLabels,
   ActionResultLabels,
@@ -92,16 +105,6 @@ const statusVariant = (status: string): 'default' | 'secondary' | 'destructive' 
   }
 }
 
-const priorityVariant = (priority: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-  switch (priority) {
-    case 'low': return 'secondary'
-    case 'medium': return 'default'
-    case 'high': return 'destructive'
-    case 'urgent': return 'destructive'
-    default: return 'default'
-  }
-}
-
 const promiseStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
   switch (status) {
     case 'pending': return 'outline'
@@ -141,13 +144,52 @@ function InfoRow({ label, value, icon: Icon }: { label: string; value: string | 
 export function CaseDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { isAdmin, canCreateAction, canCreatePromise, canDeclarePayment } = usePermissions()
+  const { isAdmin, canCreateAction, canCreatePromise, canDeclarePayment, canValidatePayment } = usePermissions()
+  const validatePayment = useValidatePayment()
 
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [actionDialogOpen, setActionDialogOpen] = useState(false)
   const [promiseDialogOpen, setPromiseDialogOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [defaultActionType, setDefaultActionType] = useState<ActionType | undefined>()
+
+  // État pour le dialog de rejet de paiement
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [rejectingPaymentId, setRejectingPaymentId] = useState<string | null>(null)
+  const [rejectionReason, setRejectionReason] = useState('')
+
+  const handleValidatePayment = useCallback(async (paymentId: string) => {
+    if (!id) return
+    try {
+      await validatePayment.mutateAsync({ payment_id: paymentId, case_id: id, approved: true })
+      toast.success('Paiement validé avec succès')
+    } catch {
+      toast.error('Erreur lors de la validation du paiement')
+    }
+  }, [id, validatePayment])
+
+  const openRejectDialog = useCallback((paymentId: string) => {
+    setRejectingPaymentId(paymentId)
+    setRejectionReason('')
+    setRejectDialogOpen(true)
+  }, [])
+
+  const handleRejectPayment = useCallback(async () => {
+    if (!id || !rejectingPaymentId) return
+    try {
+      await validatePayment.mutateAsync({
+        payment_id: rejectingPaymentId,
+        case_id: id,
+        approved: false,
+        rejection_reason: rejectionReason || undefined,
+      })
+      toast.success('Paiement rejeté')
+      setRejectDialogOpen(false)
+      setRejectingPaymentId(null)
+    } catch {
+      toast.error('Erreur lors du rejet du paiement')
+    }
+  }, [id, rejectingPaymentId, rejectionReason, validatePayment])
 
   // Prompts chaînés : après une action, proposer d'ouvrir promesse ou paiement
   const handleActionCreated = (data: ActionDialogResult) => {
@@ -196,17 +238,16 @@ export function CaseDetailPage() {
     )
   }
 
-  const totalAmount =
+  const totalAmount = Math.abs(
     (caseData.amount_principal || 0) +
     (caseData.amount_interest || 0) +
     (caseData.amount_penalties || 0) +
     (caseData.amount_fees || 0)
+  )
 
-  const totalPaid = payments
-    ?.filter((p) => p.status === 'validated')
-    .reduce((sum, p) => sum + p.amount, 0) ?? 0
-
-  const remainingBalance = totalAmount - totalPaid
+  // Valeurs stockées en base, recalculées par trigger à chaque paiement
+  const totalPaid = caseData.total_paid ?? 0
+  const remainingBalance = caseData.remaining_balance ?? totalAmount
 
   const debtorName = caseData.debtor_pp
     ? `${caseData.debtor_pp.first_name} ${caseData.debtor_pp.last_name}`
@@ -228,9 +269,6 @@ export function CaseDetailPage() {
               </h1>
               <Badge variant={statusVariant(caseData.status)}>
                 {CaseStatusLabels[caseData.status] || caseData.status}
-              </Badge>
-              <Badge variant={priorityVariant(caseData.priority)}>
-                {CasePriorityLabels[caseData.priority] || caseData.priority}
               </Badge>
               <Badge variant="outline">
                 {CasePhaseLabels[caseData.phase] || caseData.phase}
@@ -275,6 +313,7 @@ export function CaseDetailPage() {
             <InfoRow label="Date de défaut" value={formatDate(caseData.default_date)} icon={Calendar} />
             <InfoRow label="Produit" value={caseData.product_type} />
             <InfoRow label="Réf. contrat" value={caseData.contract_reference} />
+            <InfoRow label="Traitement" value={CasePhaseLabels[caseData.phase] || caseData.phase} />
             <InfoRow label="Niveau de risque" value={caseData.risk_level} icon={AlertTriangle} />
 
             {/* Solde restant - résumé rapide */}
@@ -343,12 +382,20 @@ export function CaseDetailPage() {
               </div>
             )}
 
-            {caseData.notes && (
-              <div className="pt-2 border-t">
-                <p className="text-xs text-muted-foreground">Notes</p>
-                <p className="text-sm whitespace-pre-wrap">{caseData.notes}</p>
-              </div>
-            )}
+            {caseData.notes && (() => {
+              // Filter out structured notes (shown as colored cards below)
+              const plainNotes = String(caseData.notes).split(' | ')
+                .filter((n) => !n.trim().startsWith('Nature du Prêt:') && !n.trim().startsWith('Garantie:') && !n.trim().startsWith('Démarches:'))
+                .join(' | ')
+                .trim()
+              if (!plainNotes) return null
+              return (
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-sm whitespace-pre-wrap">{plainNotes}</p>
+                </div>
+              )
+            })()}
             {isAdmin && caseData.internal_notes && (
               <div className="pt-2 border-t">
                 <p className="text-xs text-muted-foreground">Notes internes (admin)</p>
@@ -369,85 +416,36 @@ export function CaseDetailPage() {
           <CardContent className="space-y-1">
             {caseData.debtor_pp ? (
               <>
-                <InfoRow label="Nom" value={caseData.debtor_pp.last_name} icon={User} />
-                <InfoRow label="Prénom" value={caseData.debtor_pp.first_name} icon={User} />
-                <InfoRow label="Numéro client" value={caseData.debtor_pp.id_number} icon={Shield} />
-
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Situation professionnelle</p>
-                  <InfoRow label="Emploi" value={caseData.debtor_pp.occupation} icon={Briefcase} />
-                  <InfoRow label="Employeur" value={caseData.debtor_pp.employer} icon={Building2} />
-                  <InfoRow
-                    label="Adresse travail"
-                    value={[caseData.debtor_pp.address_work_street, caseData.debtor_pp.address_work_city, caseData.debtor_pp.address_work_region].filter(Boolean).join(', ') || null}
-                    icon={MapPin}
-                  />
-                </div>
-
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Contact</p>
-                  <InfoRow label="Tél. principal" value={caseData.debtor_pp.phone_primary} icon={Phone} />
-                  <InfoRow label="Tél. secondaire" value={caseData.debtor_pp.phone_secondary} icon={Phone} />
-                  <InfoRow label="Email" value={caseData.debtor_pp.email} icon={Mail} />
-                  {caseData.debtor_pp.alt_contact_name && (
-                    <>
-                      <InfoRow label="Contact alternatif" value={caseData.debtor_pp.alt_contact_name} icon={User} />
-                      <InfoRow label="Relation" value={caseData.debtor_pp.alt_contact_relation} />
-                      <InfoRow label="Tél. alternatif" value={caseData.debtor_pp.alt_contact_phone} icon={Phone} />
-                    </>
-                  )}
-                </div>
-
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Adresse géographique</p>
-                  <InfoRow label="Adresse" value={caseData.debtor_pp.address_street} icon={MapPin} />
-                  <InfoRow label="Ville" value={caseData.debtor_pp.address_city} />
-                  <InfoRow label="Région" value={caseData.debtor_pp.address_region} />
-                </div>
-
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Dates</p>
-                  <InfoRow label="Date d'affectation" value={formatDate(caseData.created_at)} icon={Calendar} />
-                  <InfoRow label="Date de défaut" value={formatDate(caseData.default_date)} icon={Calendar} />
-                </div>
-
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Engagements détaillés</p>
-                  <div className="space-y-1.5 rounded-md bg-muted/50 p-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Montant principal</span>
-                      <span className="font-medium">{formatAmount(caseData.amount_principal)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Intérêts</span>
-                      <span className="font-medium">{formatAmount(caseData.amount_interest)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Pénalités</span>
-                      <span className="font-medium">{formatAmount(caseData.amount_penalties)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Frais</span>
-                      <span className="font-medium">{formatAmount(caseData.amount_fees)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-1.5 font-semibold text-sm">
-                      <span>Total dû</span>
-                      <span>{formatAmount(totalAmount)}</span>
-                    </div>
-                    {totalPaid > 0 && (
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>Total payé</span>
-                        <span>- {formatAmount(totalPaid)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between border-t pt-1.5 font-semibold text-sm">
-                      <span>Solde restant</span>
-                      <span className={remainingBalance > 0 ? 'text-destructive' : 'text-green-600'}>
-                        {formatAmount(remainingBalance)}
-                      </span>
-                    </div>
+                {/* Photo du débiteur */}
+                {caseData.debtor_pp.photo_url && (
+                  <div className="flex justify-center pb-3">
+                    <img
+                      src={caseData.debtor_pp.photo_url}
+                      alt="Photo du débiteur"
+                      className="h-24 w-24 rounded-full object-cover border-2 border-muted shadow-sm"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
                   </div>
-                </div>
+                )}
+
+                <InfoRow label="Nom" value={`${caseData.debtor_pp.first_name || ''} ${caseData.debtor_pp.last_name || ''}`.trim()} icon={User} />
+                <InfoRow label="N° ID" value={caseData.debtor_pp.id_number} icon={Shield} />
+                <InfoRow label="Tél. principal" value={caseData.debtor_pp.phone_primary} icon={Phone} />
+                <InfoRow label="Tél. secondaire" value={caseData.debtor_pp.phone_secondary} icon={Phone} />
+                <InfoRow label="Email" value={caseData.debtor_pp.email} icon={Mail} />
+                <InfoRow label="Pays" value={caseData.debtor_pp.address_city} icon={MapPin} />
+                <InfoRow label="Adresse" value={caseData.debtor_pp.address_street} icon={MapPin} />
+                <InfoRow label="Employeur" value={caseData.debtor_pp.employer} icon={Building2} />
+                <InfoRow label="Emploi" value={caseData.debtor_pp.occupation} icon={Briefcase} />
+
+                {caseData.debtor_pp.alt_contact_name && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Contact alternatif</p>
+                    <InfoRow label="Nom" value={caseData.debtor_pp.alt_contact_name} icon={User} />
+                    <InfoRow label="Relation" value={caseData.debtor_pp.alt_contact_relation} />
+                    <InfoRow label="Tél." value={caseData.debtor_pp.alt_contact_phone} icon={Phone} />
+                  </div>
+                )}
               </>
             ) : caseData.debtor_pm ? (
               <>
@@ -494,19 +492,19 @@ export function CaseDetailPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Montant principal</span>
-                <span>{formatAmount(caseData.amount_principal)}</span>
+                <span>{formatAmount(Math.abs(caseData.amount_principal))}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Intérêts / pénalités</span>
-                <span>{formatAmount(caseData.amount_interest)}</span>
+                <span>{formatAmount(Math.abs(caseData.amount_interest))}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Pénalités de retard</span>
-                <span>{formatAmount(caseData.amount_penalties)}</span>
+                <span>{formatAmount(Math.abs(caseData.amount_penalties))}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Frais</span>
-                <span>{formatAmount(caseData.amount_fees)}</span>
+                <span>{formatAmount(Math.abs(caseData.amount_fees))}</span>
               </div>
               <div className="flex justify-between border-t pt-2 font-semibold">
                 <span>Total dû</span>
@@ -552,6 +550,47 @@ export function CaseDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cartes colorées pour les notes structurées (Nature du Prêt, Garantie, Démarches) */}
+      {caseData.notes && (() => {
+        const noteParts = String(caseData.notes).split(' | ')
+        const noteConfig = [
+          { prefix: 'Nature du Prêt:', icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200', title: 'Nature du Prêt' },
+          { prefix: 'Garantie:', icon: ShieldCheck, color: 'text-amber-600', bgColor: 'bg-amber-50 border-amber-200', title: 'Garantie' },
+          { prefix: 'Démarches:', icon: ClipboardList, color: 'text-emerald-600', bgColor: 'bg-emerald-50 border-emerald-200', title: 'Démarches' },
+        ]
+        const structuredNotes = noteParts
+          .map((note) => {
+            const trimmed = note.trim()
+            const config = noteConfig.find((c) => trimmed.startsWith(c.prefix))
+            if (config) {
+              return { ...config, content: trimmed.slice(config.prefix.length).trim() }
+            }
+            return null
+          })
+          .filter((n): n is NonNullable<typeof n> => n !== null && n.content.length > 0)
+
+        if (structuredNotes.length === 0) return null
+
+        return (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {structuredNotes.map((note, idx) => {
+              const NoteIcon = note.icon
+              return (
+                <Card key={idx} className={`border ${note.bgColor}`}>
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <NoteIcon className={`h-4 w-4 ${note.color}`} />
+                      <span className={`text-sm font-semibold ${note.color}`}>{note.title}</span>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed">{note.content}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* Onglets */}
       <Tabs defaultValue="actions">
@@ -713,6 +752,7 @@ export function CaseDetailPage() {
                       <TableHead>Méthode</TableHead>
                       <TableHead>Réf. transaction</TableHead>
                       <TableHead>Statut</TableHead>
+                      {canValidatePayment && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -731,10 +771,49 @@ export function CaseDetailPage() {
                           {payment.transaction_reference || '—'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={paymentStatusVariant(payment.status)}>
-                            {PaymentStatusLabels[payment.status] || payment.status}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={paymentStatusVariant(payment.status)}>
+                              {PaymentStatusLabels[payment.status] || payment.status}
+                            </Badge>
+                            {payment.status === 'rejected' && payment.rejection_reason && (
+                              <span className="text-xs text-destructive">
+                                {payment.rejection_reason}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
+                        {canValidatePayment && (
+                          <TableCell className="text-right">
+                            {payment.status === 'pending' ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  onClick={() => handleValidatePayment(payment.id)}
+                                  disabled={validatePayment.isPending}
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Valider
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => openRejectDialog(payment.id)}
+                                  disabled={validatePayment.isPending}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Rejeter
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                {payment.validated_at ? formatDateTime(payment.validated_at) : '—'}
+                              </span>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -825,6 +904,36 @@ export function CaseDetailPage() {
         onOpenChange={setPaymentDialogOpen}
         remainingBalance={remainingBalance}
       />
+
+      {/* Dialog de rejet de paiement */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Rejeter le paiement</DialogTitle>
+            <DialogDescription>
+              Indiquez la raison du rejet (optionnel).
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Raison du rejet..."
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            rows={3}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectPayment}
+              disabled={validatePayment.isPending}
+            >
+              {validatePayment.isPending ? 'Rejet...' : 'Confirmer le rejet'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

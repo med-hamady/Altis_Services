@@ -29,13 +29,6 @@ const statusLabels: Record<string, string> = {
   closed: 'Clôturé',
 }
 
-const priorityLabels: Record<string, string> = {
-  low: 'Basse',
-  medium: 'Moyenne',
-  high: 'Haute',
-  urgent: 'Urgente',
-}
-
 export function ReportsPage() {
   const [selectedBankId, setSelectedBankId] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -235,50 +228,6 @@ export function ReportsPage() {
                   </CardContent>
                 </Card>
 
-                {/* Par priorité */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Répartition par priorité</CardTitle>
-                    <CardDescription>
-                      Distribution des dossiers selon leur urgence
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {Object.keys(stats.byPriority).length > 0 ? (
-                      <div className="space-y-3">
-                        {Object.entries(stats.byPriority).map(([priority, count]) => {
-                          const percentage = ((count / stats.totalCases) * 100).toFixed(1)
-                          const colorClass =
-                            priority === 'urgent' || priority === 'high'
-                              ? 'bg-destructive'
-                              : priority === 'medium'
-                                ? 'bg-yellow-500'
-                                : 'bg-green-500'
-                          return (
-                            <div key={priority} className="space-y-1">
-                              <div className="flex justify-between text-sm">
-                                <span>{priorityLabels[priority] || priority}</span>
-                                <span className="text-muted-foreground">
-                                  {count} ({percentage}%)
-                                </span>
-                              </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className={`h-full transition-all ${colorClass}`}
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Aucune donnée
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Aperçu de la liste */}
@@ -309,11 +258,12 @@ export function ReportsPage() {
                             const debtorName = c.debtor_pp
                               ? `${c.debtor_pp.first_name} ${c.debtor_pp.last_name}`
                               : c.debtor_pm?.company_name || '—'
-                            const totalAmount =
+                            const totalAmount = Math.abs(
                               (c.amount_principal || 0) +
                               (c.amount_interest || 0) +
                               (c.amount_penalties || 0) +
                               (c.amount_fees || 0)
+                            )
 
                             return (
                               <tr key={c.id} className="border-t">

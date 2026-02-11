@@ -1,49 +1,47 @@
 import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Plus, FolderKanban, Search, X } from 'lucide-react'
+import { Archive, Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePermissions } from '@/contexts/AuthContext'
-import { useCases } from '../hooks/useCases'
+import { useArchivedCases } from '../hooks/useCases'
 import { useBanks } from '@/features/banks/hooks/useBanks'
-import { CreateCaseDialog } from '../components/CreateCaseDialog'
+import { ClosureReasonLabels } from '@/types/enums'
+import type { ClosureReason } from '@/types/enums'
 
-const statusLabels: Record<string, string> = {
-  new: 'Nouveau',
-  assigned: 'Affecté',
-  in_progress: 'En cours',
-  promise: 'Promesse obtenue',
-  partial_payment: 'Paiement partiel',
-  paid: 'Payé',
+const formatAmount = (amount: number) =>
+  new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'MRU',
+    minimumFractionDigits: 0,
+  }).format(amount)
+
+const formatDate = (date: string | null) => {
+  if (!date) return '—'
+  return new Date(date).toLocaleDateString('fr-FR')
 }
 
-export function CasesListPage() {
-  const { data: cases, isLoading } = useCases()
+export function ArchivePage() {
+  const { data: cases, isLoading } = useArchivedCases()
   const { data: banks } = useBanks()
   const navigate = useNavigate()
-  const { isAdmin, isAgent, isBankUser, bankId } = usePermissions()
-  const [showCreateCase, setShowCreateCase] = useState(false)
-  const canCreateCase = isAdmin || isBankUser
+  const { isBankUser } = usePermissions()
 
-  // Filtres
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedBankId, setSelectedBankId] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  // Filtrage des dossiers
+  const [selectedReason, setSelectedReason] = useState<string>('all')
+
   const filteredCases = useMemo(() => {
     if (!cases) return []
 
     return cases.filter((c) => {
-      // Filtre par banque
       if (selectedBankId !== 'all' && c.bank_id !== selectedBankId) return false
+      if (selectedReason !== 'all' && c.closure_reason !== selectedReason) return false
 
-      // Filtre par statut
-      if (selectedStatus !== 'all' && c.status !== selectedStatus) return false
-
-      // Filtre par recherche (référence, nom débiteur)
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
         const reference = c.reference?.toLowerCase() || ''
@@ -59,49 +57,28 @@ export function CasesListPage() {
 
       return true
     })
-  }, [cases, selectedBankId, selectedStatus, searchQuery])
+  }, [cases, selectedBankId, selectedReason, searchQuery])
 
-  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || searchQuery !== ''
+  const hasActiveFilters = selectedBankId !== 'all' || selectedReason !== 'all' || searchQuery !== ''
 
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedBankId('all')
-    setSelectedStatus('all')
-  }
-
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'MRU',
-      minimumFractionDigits: 0,
-    }).format(amount)
+    setSelectedReason('all')
   }
 
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            {isAgent ? 'Mes dossiers' : 'Dossiers'}
-          </h1>
-          <p className="text-muted-foreground">
-            {isAgent ? 'Dossiers qui vous sont affectés' : 'Gestion des dossiers de recouvrement'}
-          </p>
-        </div>
-        {canCreateCase && (
-          <Button onClick={() => setShowCreateCase(true)} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Nouveau dossier
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Archive</h1>
+        <p className="text-muted-foreground">Dossiers clôturés</p>
       </div>
 
       {/* Filtres */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            {/* Recherche */}
             <div className="flex-1 space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Rechercher</label>
               <div className="relative">
@@ -115,7 +92,6 @@ export function CasesListPage() {
               </div>
             </div>
 
-            {/* Filtre par banque */}
             {!isBankUser && (
               <div className="w-full sm:w-[200px] space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Banque</label>
@@ -135,16 +111,15 @@ export function CasesListPage() {
               </div>
             )}
 
-            {/* Filtre par statut */}
-            <div className="w-full sm:w-[180px] space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Statut</label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <div className="w-full sm:w-[200px] space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Motif de clôture</label>
+              <Select value={selectedReason} onValueChange={setSelectedReason}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Tous les statuts" />
+                  <SelectValue placeholder="Tous les motifs" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  {Object.entries(statusLabels).map(([value, label]) => (
+                  <SelectItem value="all">Tous les motifs</SelectItem>
+                  {Object.entries(ClosureReasonLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
@@ -153,7 +128,6 @@ export function CasesListPage() {
               </Select>
             </div>
 
-            {/* Bouton effacer */}
             {hasActiveFilters && (
               <Button variant="ghost" size="icon" onClick={clearFilters} className="shrink-0">
                 <X className="h-4 w-4" />
@@ -166,7 +140,7 @@ export function CasesListPage() {
       {/* Liste */}
       <Card>
         <CardHeader>
-          <CardTitle>{isAgent ? 'Dossiers affectés' : 'Tous les dossiers'}</CardTitle>
+          <CardTitle>Dossiers clôturés</CardTitle>
           <CardDescription>
             {filteredCases.length} dossier(s){hasActiveFilters && ` (sur ${cases?.length || 0} au total)`}
           </CardDescription>
@@ -184,7 +158,8 @@ export function CasesListPage() {
                   <TableHead>Débiteur</TableHead>
                   <TableHead className="hidden md:table-cell">Banque</TableHead>
                   <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
+                  <TableHead>Motif</TableHead>
+                  <TableHead className="hidden sm:table-cell">Date clôture</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -200,7 +175,7 @@ export function CasesListPage() {
                     <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/cases/${c.id}`)}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                          <Archive className="h-4 w-4 text-muted-foreground" />
                           <span className="font-mono text-sm font-medium">{c.reference}</span>
                         </div>
                       </TableCell>
@@ -218,7 +193,12 @@ export function CasesListPage() {
                         {formatAmount(totalAmount)}
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm">{statusLabels[c.status] || c.status}</span>
+                        <Badge variant="secondary">
+                          {c.closure_reason ? ClosureReasonLabels[c.closure_reason as ClosureReason] || c.closure_reason : '—'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm">
+                        {formatDate(c.closed_at)}
                       </TableCell>
                     </TableRow>
                   )
@@ -227,40 +207,25 @@ export function CasesListPage() {
             </Table>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FolderKanban className="h-12 w-12 text-muted-foreground/50" />
+              <Archive className="h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">
-                {hasActiveFilters ? 'Aucun résultat' : 'Aucun dossier'}
+                {hasActiveFilters ? 'Aucun résultat' : 'Aucun dossier archivé'}
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 {hasActiveFilters
                   ? 'Aucun dossier ne correspond aux filtres sélectionnés'
-                  : isAgent
-                    ? 'Aucun dossier ne vous est affecté pour le moment'
-                    : 'Commencez par créer un nouveau dossier'}
+                  : 'Les dossiers clôturés apparaîtront ici'}
               </p>
-              {hasActiveFilters ? (
+              {hasActiveFilters && (
                 <Button className="mt-4" variant="outline" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
                   Effacer les filtres
                 </Button>
-              ) : (
-                canCreateCase && (
-                  <Button className="mt-4" onClick={() => setShowCreateCase(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nouveau dossier
-                  </Button>
-                )
               )}
             </div>
           )}
         </CardContent>
       </Card>
-
-      <CreateCaseDialog
-        open={showCreateCase}
-        onOpenChange={setShowCreateCase}
-        bankId={isBankUser ? (bankId ?? undefined) : undefined}
-      />
     </div>
   )
 }

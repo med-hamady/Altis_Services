@@ -31,7 +31,7 @@ import { Separator } from '@/components/ui/separator'
 import { useCreateCase } from '../hooks/useCases'
 import { useBanks } from '@/features/banks/hooks/useBanks'
 import { useDebtorsPPByBank, useDebtorsPMByBank } from '@/features/debtors/hooks/useDebtors'
-import { CasePriority, CasePriorityLabels, CasePhase, CasePhaseLabels } from '@/types/enums'
+import { CasePhase, CasePhaseLabels } from '@/types/enums'
 import type { CreateCaseDTO } from '@/types'
 
 interface CreateCaseDialogProps {
@@ -48,7 +48,6 @@ type CaseFormData = {
   bank_reference: string
   debtor_id: string
   // Classification
-  priority: CasePriority
   phase: CasePhase
   risk_level: string
   // Informations créance
@@ -88,7 +87,6 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
     bank_id: bankId || '',
     bank_reference: '',
     debtor_id: '',
-    priority: CasePriority.Medium,
     phase: CasePhase.Amicable,
     risk_level: '',
     product_type: '',
@@ -137,7 +135,6 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
         bank_reference: data.bank_reference || undefined,
         debtor_pp_id: debtorType === 'pp' ? data.debtor_id : undefined,
         debtor_pm_id: debtorType === 'pm' ? data.debtor_id : undefined,
-        priority: data.priority,
         phase: data.phase,
         risk_level: data.risk_level || undefined,
         product_type: data.product_type || undefined,
@@ -466,33 +463,7 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 Classification & Risque
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  rules={{ required: 'La priorité est obligatoire' }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priorité *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.values(CasePriority).map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {CasePriorityLabels[p]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="phase"

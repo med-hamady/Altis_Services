@@ -37,18 +37,17 @@ export function useBankStats(bankId: string | null) {
 
       const { data: cases, error } = await supabase
         .from('cases')
-        .select('status, priority, amount_principal, amount_interest, amount_penalties, amount_fees')
+        .select('status, amount_principal, amount_interest, amount_penalties, amount_fees')
         .eq('bank_id', bankId)
 
       if (error) throw error
       if (!cases) return null
 
-      const typedCases = cases as unknown as { status: string; priority: string; amount_principal: number; amount_interest: number; amount_penalties: number; amount_fees: number }[]
+      const typedCases = cases as unknown as { status: string; amount_principal: number; amount_interest: number; amount_penalties: number; amount_fees: number }[]
 
       const stats = {
         totalCases: typedCases.length,
         byStatus: {} as Record<string, number>,
-        byPriority: {} as Record<string, number>,
         totalAmount: 0,
         totalPrincipal: 0,
         totalInterest: 0,
@@ -62,14 +61,11 @@ export function useBankStats(bankId: string | null) {
         // Par statut
         stats.byStatus[c.status] = (stats.byStatus[c.status] || 0) + 1
 
-        // Par priorité
-        stats.byPriority[c.priority] = (stats.byPriority[c.priority] || 0) + 1
-
-        // Montants
-        const principal = c.amount_principal || 0
-        const interest = c.amount_interest || 0
-        const penalties = c.amount_penalties || 0
-        const fees = c.amount_fees || 0
+        // Montants (Math.abs pour gérer les montants négatifs importés)
+        const principal = Math.abs(c.amount_principal || 0)
+        const interest = Math.abs(c.amount_interest || 0)
+        const penalties = Math.abs(c.amount_penalties || 0)
+        const fees = Math.abs(c.amount_fees || 0)
         const total = principal + interest + penalties + fees
 
         stats.totalPrincipal += principal
@@ -77,7 +73,6 @@ export function useBankStats(bankId: string | null) {
         stats.totalPenalties += penalties
         stats.totalFees += fees
         stats.totalAmount += total
-        // Solde restant = montant total (pas de paiements enregistrés pour l'instant)
         stats.totalRemainingBalance += total
       })
 

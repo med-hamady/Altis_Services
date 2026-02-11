@@ -8,7 +8,6 @@ export * from './enums'
 
 import type {
   CaseStatus,
-  CasePriority,
   CasePhase,
   ActionType,
   ActionResult,
@@ -117,6 +116,7 @@ export interface DebtorPP {
   address_work_region: string | null
   employer: string | null
   occupation: string | null
+  photo_url: string | null
   alt_contact_name: string | null
   alt_contact_relation: string | null
   alt_contact_phone: string | null
@@ -171,7 +171,6 @@ export interface Case {
   debtor_pm_id: string | null
 
   status: CaseStatus
-  priority: CasePriority
   phase: CasePhase
 
   product_type: string | null
@@ -361,7 +360,6 @@ export interface CaseBalance {
 export interface CaseFilters {
   bank_id?: string
   status?: CaseStatus | CaseStatus[]
-  priority?: CasePriority | CasePriority[]
   phase?: CasePhase | CasePhase[]
   assigned_agent_id?: string
   debtor_search?: string
@@ -479,7 +477,6 @@ export interface CreateCaseDTO {
   bank_reference?: string
   debtor_pp_id?: string
   debtor_pm_id?: string
-  priority: CasePriority
   phase?: CasePhase
   product_type?: string
   contract_reference?: string

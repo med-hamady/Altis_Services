@@ -213,13 +213,68 @@ export function useCreatePayment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: CreatePaymentInput) => {
+    mutationFn: async (input: CreatePaymentInput & { isAdmin?: boolean }) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Utilisateur non authentifié')
 
+      const { isAdmin, ...paymentData } = input
+
+      // Si l'admin déclare le paiement, il est validé directement
+      const insertData = isAdmin
+        ? {
+            ...paymentData,
+            declared_by: user.id,
+            status: 'validated' as const,
+            validated_by: user.id,
+            validated_at: new Date().toISOString(),
+          }
+        : { ...paymentData, declared_by: user.id }
+
       const { data, error } = await supabase
         .from('payments')
-        .insert([{ ...input, declared_by: user.id } as never])
+        .insert([insertData as never])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data as Payment
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'payments'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id] })
+    },
+  })
+}
+
+// =============================================================================
+// MUTATIONS : Valider / Rejeter un paiement
+// =============================================================================
+
+export function useValidatePayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: { payment_id: string; case_id: string; approved: boolean; rejection_reason?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Utilisateur non authentifié')
+
+      const updateData = input.approved
+        ? {
+            status: 'validated' as const,
+            validated_by: user.id,
+            validated_at: new Date().toISOString(),
+          }
+        : {
+            status: 'rejected' as const,
+            validated_by: user.id,
+            validated_at: new Date().toISOString(),
+            rejection_reason: input.rejection_reason || null,
+          }
+
+      const { data, error } = await supabase
+        .from('payments')
+        .update(updateData as never)
+        .eq('id', input.payment_id)
         .select()
         .single()
 

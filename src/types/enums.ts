@@ -24,7 +24,7 @@ export const CaseStatusLabels: Record<CaseStatus, string> = {
   [CaseStatus.Promise]: 'Promesse',
   [CaseStatus.PartialPayment]: 'Paiement partiel',
   [CaseStatus.Paid]: 'Payé',
-  [CaseStatus.Closed]: 'Clos',
+  [CaseStatus.Closed]: 'Clôturé',
 }
 
 // Priorités des dossiers
