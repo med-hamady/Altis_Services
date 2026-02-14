@@ -38,7 +38,8 @@ import {
   useFinalizeImport,
   useCasesByImport,
 } from '../hooks/useImports'
-import { ImportStatus, ImportStatusLabels } from '@/types/enums'
+import { ImportStatus, ImportStatusLabels, CasePhaseLabels } from '@/types/enums'
+import type { CasePhase } from '@/types/enums'
 import type { ImportRow } from '@/types'
 import { toast } from 'sonner'
 
@@ -420,7 +421,7 @@ function CasePreviewCard({
 
         <div className="flex items-center gap-2">
           {d.treatment_type ? (
-            <Badge variant="outline">{String(d.treatment_type)}</Badge>
+            <Badge variant="outline">{CasePhaseLabels[d.treatment_type as CasePhase] || String(d.treatment_type)}</Badge>
           ) : null}
         </div>
       </div>
@@ -445,7 +446,7 @@ function CasePreviewCard({
             <Field label="Date de défaut" value={String(d.default_date ?? '')} fieldKey="default_date" icon={Calendar} />
             <Field label="Produit" value={String(d.product_type ?? '')} fieldKey="product_type" />
             <Field label="Réf. contrat" value={String(d.contract_ref ?? '')} fieldKey="contract_ref" />
-            <Field label="Traitement" value={String(d.treatment_type ?? '')} fieldKey="treatment_type" />
+            <Field label="Traitement" value={d.treatment_type ? (CasePhaseLabels[d.treatment_type as CasePhase] || String(d.treatment_type)) : ''} fieldKey="treatment_type" />
 
             {/* Solde restant */}
             <div className="pt-2 border-t">
