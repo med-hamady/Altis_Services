@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth, usePermissions } from '@/contexts/AuthContext'
+import type { ActionType, ActionResult } from '@/types/enums'
 
 // Types pour les statistiques
 export interface AdminStats {
@@ -202,6 +203,175 @@ export function useBankUserStats(bankId: string | null) {
       }
     },
     enabled: !!bankId,
+    refetchInterval: 30000,
+  })
+}
+
+// ====================================================================
+// Activité récente (dernières actions)
+// ====================================================================
+
+export interface RecentAction {
+  id: string
+  action_type: ActionType
+  result: ActionResult
+  action_date: string
+  notes: string | null
+  case_id: string
+  case_reference: string
+  debtor_name: string
+}
+
+export function useRecentActions() {
+  const { user } = useAuth()
+  const { isAdmin, isAgent, isBankUser, bankId } = usePermissions()
+
+  return useQuery({
+    queryKey: ['dashboard', 'recent-actions', user?.id],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<RecentAction[]> => {
+      let query = supabase
+        .from('actions')
+        .select(`
+          id, action_type, result, action_date, notes, case_id,
+          cases!inner(reference, assigned_agent_id, bank_id,
+            debtor_pp:debtors_pp(first_name, last_name),
+            debtor_pm:debtors_pm(company_name)
+          )
+        `)
+        .order('action_date', { ascending: false })
+        .limit(10)
+
+      if (isAgent && !isAdmin) {
+        query = query.eq('cases.assigned_agent_id', user!.id)
+      } else if (isBankUser && bankId) {
+        query = query.eq('cases.bank_id', bankId)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+
+      type ActionRow = {
+        id: string
+        action_type: ActionType
+        result: ActionResult
+        action_date: string
+        notes: string | null
+        case_id: string
+        cases: {
+          reference: string
+          assigned_agent_id: string | null
+          bank_id: string | null
+          debtor_pp: { first_name: string; last_name: string } | null
+          debtor_pm: { company_name: string } | null
+        }
+      }
+
+      return ((data as unknown as ActionRow[]) || []).map((row) => {
+        const c = row.cases
+        const debtorName = c.debtor_pm?.company_name
+          || (c.debtor_pp ? `${c.debtor_pp.first_name} ${c.debtor_pp.last_name}` : 'Inconnu')
+
+        return {
+          id: row.id,
+          action_type: row.action_type,
+          result: row.result,
+          action_date: row.action_date,
+          notes: row.notes,
+          case_id: row.case_id,
+          case_reference: c.reference,
+          debtor_name: debtorName,
+        }
+      })
+    },
+    refetchInterval: 30000,
+  })
+}
+
+// ====================================================================
+// Promesses à venir (7 prochains jours)
+// ====================================================================
+
+export interface UpcomingPromise {
+  id: string
+  amount: number
+  due_date: string
+  payment_method: string | null
+  status: string
+  case_id: string
+  case_reference: string
+  debtor_name: string
+}
+
+export function useUpcomingPromises() {
+  const { user } = useAuth()
+  const { isAdmin, isAgent, isBankUser, bankId } = usePermissions()
+
+  return useQuery({
+    queryKey: ['dashboard', 'upcoming-promises', user?.id],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<UpcomingPromise[]> => {
+      const today = new Date().toISOString().split('T')[0]
+      const sevenDays = new Date()
+      sevenDays.setDate(sevenDays.getDate() + 7)
+      const sevenDaysStr = sevenDays.toISOString().split('T')[0]
+
+      let query = supabase
+        .from('promises')
+        .select(`
+          id, amount, due_date, payment_method, status, case_id,
+          cases!inner(reference, assigned_agent_id, bank_id,
+            debtor_pp:debtors_pp(first_name, last_name),
+            debtor_pm:debtors_pm(company_name)
+          )
+        `)
+        .eq('status', 'pending')
+        .gte('due_date', today)
+        .lte('due_date', sevenDaysStr)
+        .order('due_date', { ascending: true })
+
+      if (isAgent && !isAdmin) {
+        query = query.eq('cases.assigned_agent_id', user!.id)
+      } else if (isBankUser && bankId) {
+        query = query.eq('cases.bank_id', bankId)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+
+      type PromiseRow = {
+        id: string
+        amount: number
+        due_date: string
+        payment_method: string | null
+        status: string
+        case_id: string
+        cases: {
+          reference: string
+          assigned_agent_id: string | null
+          bank_id: string | null
+          debtor_pp: { first_name: string; last_name: string } | null
+          debtor_pm: { company_name: string } | null
+        }
+      }
+
+      return ((data as unknown as PromiseRow[]) || []).map((row) => {
+        const c = row.cases
+        const debtorName = c.debtor_pm?.company_name
+          || (c.debtor_pp ? `${c.debtor_pp.first_name} ${c.debtor_pp.last_name}` : 'Inconnu')
+
+        return {
+          id: row.id,
+          amount: row.amount,
+          due_date: row.due_date,
+          payment_method: row.payment_method,
+          status: row.status,
+          case_id: row.case_id,
+          case_reference: c.reference,
+          debtor_name: debtorName,
+        }
+      })
+    },
     refetchInterval: 30000,
   })
 }

@@ -25,7 +25,19 @@
       "Bash(git config:*)",
       "Bash(git push:*)",
       "Bash(ping:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: update Claude Code permissions\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: update Claude Code permissions\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(supabase --version:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase link:*)",
+      "WebFetch(domain:docs.sheetjs.com)",
+      "WebFetch(domain:officeopenxml.com)",
+      "Bash(del /f \"node_modules\\\\.tmp\\\\tsconfig.app.tsbuildinfo\")",
+      "Bash(npm ls:*)",
+      "Bash(powershell -Command:*)"
     ]
   }
 }

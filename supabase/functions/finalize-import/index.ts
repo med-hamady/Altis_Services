@@ -33,7 +33,6 @@ interface NormalizedRow {
   total_due?: number;
   remaining_balance?: number;
   currency?: string;
-  priority: string;
   treatment_type?: string;
   bank_reference?: string;
   guarantee_type?: string;
@@ -307,7 +306,6 @@ Deno.serve(async (req) => {
           debtor_pm_id: debtorPmId,
           assigned_agent_id: assignedAgentId,
           status: "new",
-          priority: data.priority || "medium",
           phase,
           product_type: data.product_type || null,
           contract_reference: data.contract_ref || null,

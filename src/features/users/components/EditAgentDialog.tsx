@@ -32,10 +32,8 @@ import type { Agent } from '@/types'
 type EditAgentFormData = {
   full_name: string
   phone: string
-  sector: string
-  zone: string
   is_active: string
-  password: string
+  pin: string
 }
 
 interface EditAgentDialogProps {
@@ -53,10 +51,8 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
     defaultValues: {
       full_name: '',
       phone: '',
-      sector: '',
-      zone: '',
       is_active: 'true',
-      password: '',
+      pin: '',
     },
   })
 
@@ -65,10 +61,8 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
       form.reset({
         full_name: agent.full_name || '',
         phone: agent.phone || '',
-        sector: agent.sector || '',
-        zone: agent.zone || '',
         is_active: agent.is_active ? 'true' : 'false',
-        password: '',
+        pin: '',
       })
       setServerError(null)
     }
@@ -83,10 +77,9 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
         agent: {
           full_name: data.full_name,
           phone: data.phone || null,
-          sector: data.sector || null,
           is_active: data.is_active === 'true',
         } as never,
-        password: data.password || undefined,
+        password: data.pin ? `altis${data.pin}` : undefined,
       })
       onOpenChange(false)
     } catch (error: unknown) {
@@ -144,20 +137,23 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
 
             <FormField
               control={form.control}
-              name="password"
+              name="pin"
               rules={{
-                minLength: {
-                  value: 6,
-                  message: 'Le mot de passe doit contenir au moins 6 caractères',
+                validate: (v) => {
+                  if (!v) return true // vide = ne pas changer
+                  if (!/^\d{4}$/.test(v)) return 'Le code PIN doit contenir exactement 4 chiffres'
+                  return true
                 },
               }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nouveau mot de passe</FormLabel>
+                  <FormLabel>Nouveau code PIN</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
                         type={showPassword ? 'text' : 'password'}
+                        inputMode="numeric"
+                        maxLength={4}
                         placeholder="Laisser vide pour ne pas changer"
                         {...field}
                       />
@@ -176,36 +172,6 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="sector"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Secteur</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Bancaire" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="zone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Zone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Nouakchott" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}

@@ -4,7 +4,6 @@ import {
   Building2,
   Users,
   FolderKanban,
-  FileText,
   BarChart3,
   UserCircle,
   ClipboardList,
@@ -74,12 +73,6 @@ const navItems: NavItem[] = [
     roles: ['admin'],
   },
   {
-    title: 'Documents',
-    href: '/documents',
-    icon: FileText,
-    roles: ['admin'],
-  },
-  {
     title: 'Mon profil',
     href: '/profile',
     icon: UserCog,
@@ -89,6 +82,7 @@ const navItems: NavItem[] = [
     title: 'Rapports',
     href: '/reports',
     icon: BarChart3,
+    roles: ['admin'],
   },
 ]
 

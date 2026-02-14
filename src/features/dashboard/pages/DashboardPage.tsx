@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import {
   Card,
   CardContent,
@@ -5,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { useAuth, usePermissions } from '@/contexts/AuthContext'
 import {
   FolderKanban,
@@ -16,8 +18,24 @@ import {
   Clock,
   Activity,
   CalendarClock,
+  Phone,
+  MapPin,
+  MessageSquare,
+  Mail,
+  FileText,
+  Handshake,
+  MoreHorizontal,
 } from 'lucide-react'
-import { useAdminStats, useAgentStats, useBankUserStats } from '../hooks/useDashboardStats'
+import {
+  useAdminStats,
+  useAgentStats,
+  useBankUserStats,
+  useRecentActions,
+  useUpcomingPromises,
+} from '../hooks/useDashboardStats'
+import type { RecentAction, UpcomingPromise } from '../hooks/useDashboardStats'
+import { ActionTypeLabels, ActionResultLabels } from '@/types/enums'
+import type { ActionType, ActionResult } from '@/types/enums'
 
 // Skeleton pour le chargement
 function StatCardSkeleton() {
@@ -101,13 +119,77 @@ function EmptyState({
   )
 }
 
+// Icône selon le type d'action
+const ACTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  call: Phone,
+  visit: MapPin,
+  sms: MessageSquare,
+  email: Mail,
+  letter: FileText,
+  meeting: Handshake,
+  other: MoreHorizontal,
+}
+
+// Temps relatif simple
+function timeAgo(dateStr: string): string {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const diffMs = now.getTime() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return "à l'instant"
+  if (diffMin < 60) return `il y a ${diffMin}min`
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `il y a ${diffH}h`
+  const diffD = Math.floor(diffH / 24)
+  if (diffD === 1) return 'hier'
+  if (diffD < 7) return `il y a ${diffD}j`
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
+// Label de date relative pour les promesses
+function dueDateLabel(dateStr: string): { text: string; variant: 'destructive' | 'secondary' | 'outline' } {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const due = new Date(dateStr + 'T00:00:00')
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000)
+
+  if (diffDays < 0) return { text: 'En retard', variant: 'destructive' }
+  if (diffDays === 0) return { text: "Aujourd'hui", variant: 'destructive' }
+  if (diffDays === 1) return { text: 'Demain', variant: 'secondary' }
+  return { text: `Dans ${diffDays}j`, variant: 'outline' }
+}
+
+const formatMRU = (amount: number) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MRU', minimumFractionDigits: 0 }).format(amount)
+
+// Skeleton pour les listes d'activité
+function ActivityListSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex items-center gap-3">
+          <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3.5 w-3/4 animate-pulse rounded bg-muted" />
+            <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function DashboardPage() {
   const { currentUser } = useAuth()
   const { isAdmin, isAgent, isBankUser, bankId } = usePermissions()
 
+  const navigate = useNavigate()
+
   const { data: adminStats, isLoading: adminLoading } = useAdminStats(isAdmin)
   const { data: agentStats, isLoading: agentLoading } = useAgentStats(isAgent)
   const { data: bankStats, isLoading: bankLoading } = useBankUserStats(bankId)
+  const { data: recentActions, isLoading: actionsLoading } = useRecentActions()
+  const { data: upcomingPromises, isLoading: promisesLoading } = useUpcomingPromises()
 
   const isLoading = isAdmin ? adminLoading : isAgent ? agentLoading : bankLoading
 
@@ -233,10 +315,45 @@ export function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={Activity}
-              message="Aucune activité récente à afficher."
-            />
+            {actionsLoading ? (
+              <ActivityListSkeleton />
+            ) : !recentActions?.length ? (
+              <EmptyState
+                icon={Activity}
+                message="Aucune activité récente à afficher."
+              />
+            ) : (
+              <div className="space-y-1">
+                {recentActions.map((action: RecentAction) => {
+                  const Icon = ACTION_ICONS[action.action_type] || Activity
+                  return (
+                    <button
+                      key={action.id}
+                      onClick={() => navigate(`/cases/${action.case_id}`)}
+                      className="flex w-full items-start gap-3 rounded-md p-2 text-left transition-colors hover:bg-muted/50"
+                    >
+                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-tight">
+                          {ActionTypeLabels[action.action_type as ActionType]}{' '}
+                          <span className="font-normal text-muted-foreground">
+                            — {ActionResultLabels[action.result as ActionResult]}
+                          </span>
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {action.case_reference} · {action.debtor_name}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {timeAgo(action.action_date)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -248,10 +365,42 @@ export function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={CalendarClock}
-              message="Aucune promesse à échéance proche."
-            />
+            {promisesLoading ? (
+              <ActivityListSkeleton />
+            ) : !upcomingPromises?.length ? (
+              <EmptyState
+                icon={CalendarClock}
+                message="Aucune promesse à échéance proche."
+              />
+            ) : (
+              <div className="space-y-1">
+                {upcomingPromises.map((promise: UpcomingPromise) => {
+                  const dateInfo = dueDateLabel(promise.due_date)
+                  return (
+                    <button
+                      key={promise.id}
+                      onClick={() => navigate(`/cases/${promise.case_id}`)}
+                      className="flex w-full items-start gap-3 rounded-md p-2 text-left transition-colors hover:bg-muted/50"
+                    >
+                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
+                        <CalendarClock className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-tight">
+                          {formatMRU(promise.amount)}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {promise.case_reference} · {promise.debtor_name}
+                        </p>
+                      </div>
+                      <Badge variant={dateInfo.variant} className="shrink-0">
+                        {dateInfo.text}
+                      </Badge>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

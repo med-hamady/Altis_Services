@@ -163,7 +163,7 @@ export function DebtorsListPage() {
                       <TableHead>Téléphone</TableHead>
                       <TableHead className="hidden md:table-cell">Email</TableHead>
                       <TableHead className="hidden md:table-cell">Ville</TableHead>
-                      <TableHead className="hidden lg:table-cell">Profession</TableHead>
+                      <TableHead className="hidden lg:table-cell">Employeur</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -186,11 +186,7 @@ export function DebtorsListPage() {
                         <TableCell className="hidden md:table-cell">{debtor.email || '—'}</TableCell>
                         <TableCell className="hidden md:table-cell">{debtor.address_city || '—'}</TableCell>
                         <TableCell className="hidden lg:table-cell">
-                          {debtor.occupation ? (
-                            <Badge variant="outline">{debtor.occupation}</Badge>
-                          ) : (
-                            '—'
-                          )}
+                          {debtor.employer || '—'}
                         </TableCell>
                       </TableRow>
                     ))}

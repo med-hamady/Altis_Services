@@ -5,12 +5,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Plus, Shield, Pencil } from 'lucide-react'
 import { useAdmins } from '../hooks/useUsers'
+import { AdminDialog } from './AdminDialog'
 import { EditAdminDialog } from './EditAdminDialog'
 import type { Admin } from '@/types'
 
 export function AdminsTable() {
   const { data: admins, isLoading } = useAdmins()
   const [editAdmin, setEditAdmin] = useState<Admin | null>(null)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
 
   return (
     <Card>
@@ -22,7 +24,7 @@ export function AdminsTable() {
               {admins?.length || 0} administrateur(s)
             </CardDescription>
           </div>
-          <Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nouvel admin
           </Button>
@@ -38,7 +40,7 @@ export function AdminsTable() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nom complet</TableHead>
-                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead className="hidden sm:table-cell">Username</TableHead>
                 <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -53,7 +55,7 @@ export function AdminsTable() {
                       <span className="font-medium">{admin.full_name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{admin.email}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{admin.username || '—'}</TableCell>
                   <TableCell className="hidden md:table-cell">{admin.phone || '—'}</TableCell>
                   <TableCell>
                     <Badge variant={admin.is_active ? 'default' : 'secondary'}>
@@ -77,13 +79,18 @@ export function AdminsTable() {
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Shield className="h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-semibold">Aucun administrateur</h3>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Créer un admin
             </Button>
           </div>
         )}
       </CardContent>
+
+      <AdminDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
 
       <EditAdminDialog
         admin={editAdmin}

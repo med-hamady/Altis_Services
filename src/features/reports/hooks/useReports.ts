@@ -37,13 +37,13 @@ export function useBankStats(bankId: string | null) {
 
       const { data: cases, error } = await supabase
         .from('cases')
-        .select('status, amount_principal, amount_interest, amount_penalties, amount_fees')
+        .select('status, amount_principal, amount_interest, amount_penalties, amount_fees, total_paid, remaining_balance')
         .eq('bank_id', bankId)
 
       if (error) throw error
       if (!cases) return null
 
-      const typedCases = cases as unknown as { status: string; amount_principal: number; amount_interest: number; amount_penalties: number; amount_fees: number }[]
+      const typedCases = cases as unknown as { status: string; amount_principal: number; amount_interest: number; amount_penalties: number; amount_fees: number; total_paid: number; remaining_balance: number }[]
 
       const stats = {
         totalCases: typedCases.length,
@@ -73,7 +73,8 @@ export function useBankStats(bankId: string | null) {
         stats.totalPenalties += penalties
         stats.totalFees += fees
         stats.totalAmount += total
-        stats.totalRemainingBalance += total
+        stats.totalPaid += (c.total_paid || 0)
+        stats.totalRemainingBalance += (c.remaining_balance ?? total)
       })
 
       return stats

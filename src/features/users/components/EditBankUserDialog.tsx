@@ -34,7 +34,7 @@ type EditBankUserFormData = {
   phone: string
   job_title: string
   is_active: string
-  password: string
+  pin: string
 }
 
 interface EditBankUserDialogProps {
@@ -54,7 +54,7 @@ export function EditBankUserDialog({ user, open, onOpenChange }: EditBankUserDia
       phone: '',
       job_title: '',
       is_active: 'true',
-      password: '',
+      pin: '',
     },
   })
 
@@ -65,7 +65,7 @@ export function EditBankUserDialog({ user, open, onOpenChange }: EditBankUserDia
         phone: user.phone || '',
         job_title: user.job_title || '',
         is_active: user.is_active ? 'true' : 'false',
-        password: '',
+        pin: '',
       })
       setServerError(null)
     }
@@ -83,7 +83,7 @@ export function EditBankUserDialog({ user, open, onOpenChange }: EditBankUserDia
           job_title: data.job_title || null,
           is_active: data.is_active === 'true',
         } as never,
-        password: data.password || undefined,
+        password: data.pin ? `altis${data.pin}` : undefined,
       })
       onOpenChange(false)
     } catch (error: unknown) {
@@ -141,20 +141,23 @@ export function EditBankUserDialog({ user, open, onOpenChange }: EditBankUserDia
 
             <FormField
               control={form.control}
-              name="password"
+              name="pin"
               rules={{
-                minLength: {
-                  value: 6,
-                  message: 'Le mot de passe doit contenir au moins 6 caractères',
+                validate: (v) => {
+                  if (!v) return true
+                  if (!/^\d{4}$/.test(v)) return 'Le code PIN doit contenir exactement 4 chiffres'
+                  return true
                 },
               }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nouveau mot de passe</FormLabel>
+                  <FormLabel>Nouveau code PIN</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
                         type={showPassword ? 'text' : 'password'}
+                        inputMode="numeric"
+                        maxLength={4}
                         placeholder="Laisser vide pour ne pas changer"
                         {...field}
                       />

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, MoreVertical, Building2 } from 'lucide-react'
+import { BankAvatar } from '@/components/BankAvatar'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -102,9 +103,7 @@ export function BanksPage() {
                   <TableRow key={bank.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <Building2 className="h-5 w-5 text-primary" />
-                        </div>
+                        <BankAvatar logoUrl={bank.logo_url} name={bank.name} />
                         <div>
                           <p className="font-medium">{bank.name}</p>
                           <p className="text-sm text-muted-foreground">

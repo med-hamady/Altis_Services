@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Landmark, Users } from 'lucide-react'
+import { BankAvatar } from '@/components/BankAvatar'
 import {
   Card,
   CardContent,
@@ -54,9 +55,7 @@ export function DebtorsBankSelectionPage() {
                 onClick={() => navigate(`/debtors/${bank.id}`)}
               >
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Landmark className="h-5 w-5 text-primary" />
-                  </div>
+                  <BankAvatar logoUrl={bank.logo_url} name={bank.name} />
                   <div className="flex-1 space-y-1">
                     <CardTitle className="text-base">{bank.name}</CardTitle>
                     {bank.code && (

@@ -9,6 +9,7 @@ import { Upload, FileSpreadsheet, Loader2, CheckCircle, XCircle, AlertTriangle, 
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useBanks } from '@/features/banks/hooks/useBanks'
+import { BankAvatar } from '@/components/BankAvatar'
 import { useImports, useCreateImport, useProcessImport } from '../hooks/useImports'
 import { ImportStatus, ImportStatusLabels } from '@/types/enums'
 import { toast } from 'sonner'
@@ -110,7 +111,10 @@ export function ImportsPage() {
                 <SelectContent>
                   {banks?.filter((b) => b.is_active).map((bank) => (
                     <SelectItem key={bank.id} value={bank.id}>
-                      {bank.name}
+                      <div className="flex items-center gap-2">
+                        <BankAvatar logoUrl={bank.logo_url} name={bank.name} size="sm" />
+                        {bank.name}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -186,8 +190,9 @@ export function ImportsPage() {
                       {formatDate(imp.created_at)}
                     </TableCell>
                     <TableCell>
-                      <div className="max-w-[150px] truncate">
-                        {imp.bank?.name || '—'}
+                      <div className="flex items-center gap-2 max-w-[200px]">
+                        <BankAvatar logoUrl={imp.bank?.logo_url} name={imp.bank?.name || ''} size="sm" />
+                        <span className="truncate">{imp.bank?.name || '—'}</span>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">

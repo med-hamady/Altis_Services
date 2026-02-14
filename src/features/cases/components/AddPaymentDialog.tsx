@@ -52,9 +52,11 @@ interface AddPaymentDialogProps {
   onOpenChange: (open: boolean) => void
   /** Solde restant du dossier pour validation du montant */
   remainingBalance?: number
+  /** Montant pré-rempli (ex: depuis une promesse tenue) */
+  defaultAmount?: number
 }
 
-export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance }: AddPaymentDialogProps) {
+export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance, defaultAmount }: AddPaymentDialogProps) {
   const createPayment = useCreatePayment()
   const { isAdmin } = usePermissions()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -75,7 +77,7 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance 
   useEffect(() => {
     if (open) {
       form.reset({
-        amount: '',
+        amount: defaultAmount ? String(defaultAmount) : '',
         payment_date: new Date().toISOString().slice(0, 10),
         payment_method: '',
         transaction_reference: '',
@@ -83,7 +85,7 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance 
       setServerError(null)
       setSelectedFile(null)
     }
-  }, [open, form])
+  }, [open, form, defaultAmount])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -228,10 +230,17 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance 
             <FormField
               control={form.control}
               name="payment_method"
+              rules={{ required: 'Mode de paiement requis' }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mode de paiement</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel>Mode de paiement *</FormLabel>
+                  <Select onValueChange={(val) => {
+                    field.onChange(val)
+                    // Effacer l'erreur de référence si on passe en espèces
+                    if (val === 'especes') {
+                      form.clearErrors('transaction_reference')
+                    }
+                  }} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner un mode" />
@@ -251,9 +260,19 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance 
             <FormField
               control={form.control}
               name="transaction_reference"
+              rules={{
+                validate: (v) => {
+                  const method = form.getValues('payment_method')
+                  if (method === 'especes') return true
+                  if (!v || !v.trim()) return 'Référence de transaction requise'
+                  return true
+                },
+              }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Référence de transaction</FormLabel>
+                  <FormLabel>
+                    Référence de transaction {form.watch('payment_method') !== 'especes' && '*'}
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Ex: N° de reçu, réf. virement..." {...field} />
                   </FormControl>

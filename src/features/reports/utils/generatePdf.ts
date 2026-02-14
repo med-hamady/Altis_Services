@@ -39,24 +39,10 @@ const LIGHT_BG: [number, number, number] = [240, 243, 247]
 const RED: [number, number, number] = [180, 30, 30]
 const GREEN: [number, number, number] = [34, 120, 60]
 
-const formatAmount = (amount: number): string => {
-  const num = Math.round(amount)
-  const parts: string[] = []
-  let remaining = num
-
-  if (remaining === 0) return '0 MRU'
-
-  while (remaining > 0) {
-    const part = remaining % 1000
-    remaining = Math.floor(remaining / 1000)
-    if (remaining > 0) {
-      parts.unshift(part.toString().padStart(3, '0'))
-    } else {
-      parts.unshift(part.toString())
-    }
-  }
-
-  return parts.join('.') + ' MRU'
+const formatAmount = (amount: unknown): string => {
+  const num = Math.round(Math.abs(Number(amount) || 0))
+  if (num === 0) return '0 MRU'
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' MRU'
 }
 
 const formatDatePdf = (date: Date): string => {
@@ -289,12 +275,12 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
 
     const rc = isPM ? c.debtor_pm?.rc_number || '-' : '-'
 
-    const principal = c.amount_principal || 0
-    const interest = c.amount_interest || 0
-    const penalties = c.amount_penalties || 0
-    const fees = c.amount_fees || 0
+    const principal = Math.abs(Number(c.amount_principal) || 0)
+    const interest = Math.abs(Number(c.amount_interest) || 0)
+    const penalties = Math.abs(Number(c.amount_penalties) || 0)
+    const fees = Math.abs(Number(c.amount_fees) || 0)
     const total = principal + interest + penalties + fees
-    const remaining = total
+    const remaining = Number(c.remaining_balance) || total
 
     return [
       c.reference || '-',

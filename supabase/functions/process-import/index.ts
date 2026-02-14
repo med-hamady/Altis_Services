@@ -101,7 +101,6 @@ const FRENCH_COLUMNS: Record<string, string> = {
   "solde restant": "remaining_balance",
   "devise": "currency",
   "devise*": "currency",
-  "priorite": "priority",
   "type de traitement": "treatment_type",
   "agent assigne (email)": "agent_email",
   "agent assigne": "agent_email",
@@ -169,8 +168,6 @@ const LEGACY_COLUMNS: Record<string, string> = {
   "total": "total_due",
   "devise": "currency",
   "currency": "currency",
-  "priorite": "priority",
-  "priority": "priority",
   "notes": "notes",
   "rc_number": "rc_number",
   "registre_commerce": "rc_number",
@@ -261,16 +258,6 @@ function normalizeDebtorType(val: unknown): string | null {
   if (["pp", "personne physique", "physique", "individu", "particulier"].includes(str)) return "pp";
   if (["pm", "personne morale", "morale", "entreprise", "societe", "société"].includes(str)) return "pm";
   return null;
-}
-
-function normalizePriority(val: unknown): string {
-  if (!val) return "medium";
-  const str = String(val).toLowerCase().trim();
-  if (["low", "basse", "faible"].includes(str)) return "low";
-  if (["medium", "moyenne", "moyen", "normal", ""].includes(str)) return "medium";
-  if (["high", "haute", "élevée", "elevee"].includes(str)) return "high";
-  if (["urgent", "urgente", "critique"].includes(str)) return "urgent";
-  return "medium";
 }
 
 function normalizeTreatmentType(val: unknown): string {
@@ -926,7 +913,6 @@ function normalizeRow(mapped: RawRow): NormalizedRow {
   n.amount_fees = parseAmount(mapped.amount_fees) || 0;
   n.currency = mapped.currency ? String(mapped.currency).toUpperCase().trim() : "MRU";
   if (n.currency !== "MRU") n.currency = "MRU";
-  n.priority = normalizePriority(mapped.priority);
   n.treatment_type = normalizeTreatmentType(mapped.treatment_type);
   n.agent_email = mapped.agent_email ? String(mapped.agent_email).trim().toLowerCase() : null;
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +20,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Building2, Upload, X } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 import { useCreateBank, useUpdateBank } from '../hooks/useBanks'
 import type { Bank } from '@/types'
 
@@ -40,9 +42,17 @@ type BankFormData = {
   is_active: boolean
 }
 
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_SIZE = 2 * 1024 * 1024 // 2 Mo
+
 export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
   const createBank = useCreateBank()
   const updateBank = useUpdateBank()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [fileError, setFileError] = useState<string | null>(null)
 
   const form = useForm<BankFormData>({
     defaultValues: {
@@ -70,6 +80,7 @@ export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
         logo_url: bank.logo_url,
         is_active: bank.is_active,
       })
+      setLogoPreview(bank.logo_url || null)
     } else {
       form.reset({
         name: '',
@@ -81,24 +92,90 @@ export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
         logo_url: null,
         is_active: true,
       })
+      setLogoPreview(null)
     }
+    setLogoFile(null)
+    setFileError(null)
   }, [bank, form])
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setFileError(null)
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setFileError('Format accepté : JPG, PNG ou WebP')
+      return
+    }
+
+    if (file.size > MAX_SIZE) {
+      setFileError("L'image ne doit pas dépasser 2 Mo")
+      return
+    }
+
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  const removeLogo = () => {
+    setLogoFile(null)
+    setLogoPreview(bank?.logo_url || null)
+    setFileError(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const uploadLogo = async (bankId: string): Promise<string | null> => {
+    if (!logoFile) return null
+
+    const ext = logoFile.name.split('.').pop()
+    const filePath = `banks/${bankId}/logo.${ext}`
+
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, logoFile, { upsert: true })
+
+    if (error) throw error
+
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
+    return urlData.publicUrl
+  }
 
   const onSubmit = async (data: BankFormData) => {
     try {
+      setUploading(true)
+
       if (bank) {
         // Mise à jour
-        await updateBank.mutateAsync({ id: bank.id, bank: data })
+        let logoUrl = data.logo_url
+        if (logoFile) {
+          logoUrl = await uploadLogo(bank.id)
+        }
+        await updateBank.mutateAsync({ id: bank.id, bank: { ...data, logo_url: logoUrl } })
       } else {
-        // Création
-        await createBank.mutateAsync(data)
+        // Création : d'abord créer la banque, puis uploader le logo
+        const newBank = await createBank.mutateAsync(data)
+        if (logoFile && newBank?.id) {
+          const logoUrl = await uploadLogo(newBank.id)
+          if (logoUrl) {
+            await updateBank.mutateAsync({ id: newBank.id, bank: { logo_url: logoUrl } })
+          }
+        }
       }
       onOpenChange(false)
       form.reset()
+      setLogoFile(null)
+      setLogoPreview(null)
     } catch (error) {
       console.error('Erreur:', error)
+    } finally {
+      setUploading(false)
     }
   }
+
+  const isPending = createBank.isPending || updateBank.isPending || uploading
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,6 +193,56 @@ export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Upload logo */}
+            <div className="flex flex-col items-center gap-3">
+              <div
+                className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/25 bg-muted/50 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {logoPreview ? (
+                  <img
+                    src={logoPreview}
+                    alt="Logo"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Building2 className="h-8 w-8 text-muted-foreground/50" />
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-3 w-3" />
+                  {logoPreview ? 'Changer le logo' : 'Ajouter un logo'}
+                </Button>
+                {logoFile && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeLogo}
+                  >
+                    <X className="mr-1 h-3 w-3" />
+                    Retirer
+                  </Button>
+                )}
+              </div>
+              {fileError && (
+                <p className="text-sm text-destructive">{fileError}</p>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="name"
@@ -274,9 +401,9 @@ export function BankDialog({ bank, open, onOpenChange }: BankDialogProps) {
               </Button>
               <Button
                 type="submit"
-                disabled={createBank.isPending || updateBank.isPending}
+                disabled={isPending}
               >
-                {createBank.isPending || updateBank.isPending
+                {isPending
                   ? 'Enregistrement...'
                   : bank
                   ? 'Modifier'

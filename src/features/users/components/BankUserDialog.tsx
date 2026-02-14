@@ -27,10 +27,11 @@ import {
 } from '@/components/ui/select'
 import { useCreateBankUser } from '../hooks/useUsers'
 import { useBanks } from '@/features/banks/hooks/useBanks'
+import { BankAvatar } from '@/components/BankAvatar'
 
 type BankUserFormData = {
-  email: string
-  password: string
+  username: string
+  pin: string
   full_name: string
   phone: string
   bank_id: string
@@ -51,8 +52,8 @@ export function BankUserDialog({ open, onOpenChange }: BankUserDialogProps) {
 
   const form = useForm<BankUserFormData>({
     defaultValues: {
-      email: '',
-      password: '',
+      username: '',
+      pin: '',
       full_name: '',
       phone: '',
       bank_id: '',
@@ -70,24 +71,26 @@ export function BankUserDialog({ open, onOpenChange }: BankUserDialogProps) {
   const onSubmit = async (data: BankUserFormData) => {
     setServerError(null)
     try {
+      const email = `${data.username.toLowerCase().trim()}@altis.local`
+      const password = `altis${data.pin}`
+
       await createBankUser.mutateAsync({
-        email: data.email,
-        password: data.password,
+        email,
+        password,
         full_name: data.full_name,
         phone: data.phone || undefined,
         bank_id: data.bank_id,
         job_title: data.job_title || undefined,
+        username: data.username.toLowerCase().trim(),
       })
       onOpenChange(false)
       form.reset()
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur inconnue'
-      if (message.includes('invalid') || message.includes('email')) {
-        setServerError("Adresse email invalide ou rejetée. Essayez un email avec un domaine standard (ex: gmail.com).")
-      } else if (message.includes('rate limit') || message.includes('429')) {
+      if (message.includes('rate limit') || message.includes('429')) {
         setServerError("Trop de tentatives. Veuillez attendre quelques minutes avant de réessayer.")
       } else if (message.includes('already registered') || message.includes('duplicate')) {
-        setServerError("Un utilisateur avec cet email existe déjà.")
+        setServerError("Ce nom d'utilisateur est déjà pris.")
       } else {
         setServerError(message)
       }
@@ -121,47 +124,59 @@ export function BankUserDialog({ open, onOpenChange }: BankUserDialogProps) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="email"
-              rules={{
-                required: "L'email est obligatoire",
-                pattern: {
-                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: 'Email invalide',
-                },
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email *</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="utilisateur@banque.mr" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="username"
+                rules={{
+                  required: "Le nom d'utilisateur est obligatoire",
+                  pattern: {
+                    value: /^[a-zA-Z0-9._-]+$/,
+                    message: 'Lettres, chiffres, points et tirets uniquement',
+                  },
+                  minLength: {
+                    value: 3,
+                    message: 'Minimum 3 caractères',
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom d'utilisateur *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: fatima.sgm" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="password"
-              rules={{
-                required: 'Le mot de passe est obligatoire',
-                minLength: {
-                  value: 6,
-                  message: 'Le mot de passe doit contenir au moins 6 caractères',
-                },
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mot de passe *</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Minimum 6 caractères" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="pin"
+                rules={{
+                  required: 'Le code PIN est obligatoire',
+                  pattern: {
+                    value: /^\d{4}$/,
+                    message: 'Le code PIN doit contenir exactement 4 chiffres',
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Code PIN *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="4 chiffres"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -179,7 +194,10 @@ export function BankUserDialog({ open, onOpenChange }: BankUserDialogProps) {
                     <SelectContent>
                       {activeBanks.map((bank) => (
                         <SelectItem key={bank.id} value={bank.id}>
-                          {bank.name}
+                          <div className="flex items-center gap-2">
+                            <BankAvatar logoUrl={bank.logo_url} name={bank.name} size="sm" />
+                            {bank.name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>

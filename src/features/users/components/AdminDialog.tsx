@@ -18,25 +18,25 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { useCreateAgent } from '../hooks/useUsers'
+import { useCreateAdmin } from '../hooks/useUsers'
 
-type AgentFormData = {
+type AdminFormData = {
   username: string
   pin: string
   full_name: string
   phone: string
 }
 
-interface AgentDialogProps {
+interface AdminDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function AgentDialog({ open, onOpenChange }: AgentDialogProps) {
-  const createAgent = useCreateAgent()
+export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
+  const createAdmin = useCreateAdmin()
   const [serverError, setServerError] = useState<string | null>(null)
 
-  const form = useForm<AgentFormData>({
+  const form = useForm<AdminFormData>({
     defaultValues: {
       username: '',
       pin: '',
@@ -52,13 +52,13 @@ export function AgentDialog({ open, onOpenChange }: AgentDialogProps) {
     }
   }, [open, form])
 
-  const onSubmit = async (data: AgentFormData) => {
+  const onSubmit = async (data: AdminFormData) => {
     setServerError(null)
     try {
       const email = `${data.username.toLowerCase().trim()}@altis.local`
       const password = `altis${data.pin}`
 
-      await createAgent.mutateAsync({
+      await createAdmin.mutateAsync({
         email,
         password,
         full_name: data.full_name,
@@ -83,9 +83,9 @@ export function AgentDialog({ open, onOpenChange }: AgentDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Nouvel agent terrain</DialogTitle>
+          <DialogTitle>Nouvel administrateur</DialogTitle>
           <DialogDescription>
-            Créez un compte pour un nouvel agent de recouvrement
+            Créez un compte pour un nouvel administrateur
           </DialogDescription>
         </DialogHeader>
 
@@ -99,7 +99,7 @@ export function AgentDialog({ open, onOpenChange }: AgentDialogProps) {
                 <FormItem>
                   <FormLabel>Nom complet *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Mohamed Ould Sidi" {...field} />
+                    <Input placeholder="Ex: Ahmed Salem" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,7 +125,7 @@ export function AgentDialog({ open, onOpenChange }: AgentDialogProps) {
                   <FormItem>
                     <FormLabel>Nom d'utilisateur *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: njouban" {...field} />
+                      <Input placeholder="Ex: ahmed.admin" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -196,9 +196,9 @@ export function AgentDialog({ open, onOpenChange }: AgentDialogProps) {
               </Button>
               <Button
                 type="submit"
-                disabled={createAgent.isPending}
+                disabled={createAdmin.isPending}
               >
-                {createAgent.isPending ? 'Création...' : 'Créer l\'agent'}
+                {createAdmin.isPending ? 'Création...' : 'Créer l\'admin'}
               </Button>
             </DialogFooter>
           </form>

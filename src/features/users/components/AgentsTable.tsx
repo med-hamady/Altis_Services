@@ -3,16 +3,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Plus, UserCheck, Pencil } from 'lucide-react'
-import { useAgents } from '../hooks/useUsers'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Plus, UserCheck, Pencil, Trash2, MoreVertical } from 'lucide-react'
+import { useAgents, useDeleteAgent } from '../hooks/useUsers'
 import { AgentDialog } from './AgentDialog'
 import { EditAgentDialog } from './EditAgentDialog'
 import type { Agent } from '@/types'
 
 export function AgentsTable() {
   const { data: agents, isLoading } = useAgents()
+  const deleteAgent = useDeleteAgent()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editAgent, setEditAgent] = useState<Agent | null>(null)
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet agent ?')) {
+      await deleteAgent.mutateAsync(id)
+    }
+  }
 
   return (
     <>
@@ -41,10 +56,8 @@ export function AgentsTable() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom complet</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="hidden sm:table-cell">Utilisateur</TableHead>
                   <TableHead className="hidden md:table-cell">Téléphone</TableHead>
-                  <TableHead className="hidden md:table-cell">Secteur</TableHead>
-                  <TableHead className="hidden lg:table-cell">Zone</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -58,23 +71,37 @@ export function AgentsTable() {
                         <span className="font-medium">{agent.full_name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">{agent.email}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{agent.username || agent.email.split('@')[0]}</TableCell>
                     <TableCell className="hidden md:table-cell">{agent.phone || '—'}</TableCell>
-                    <TableCell className="hidden md:table-cell">{agent.sector || '—'}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{agent.zone || '—'}</TableCell>
                     <TableCell>
                       <Badge variant={agent.is_active ? 'default' : 'secondary'}>
                         {agent.is_active ? 'Actif' : 'Inactif'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setEditAgent(agent)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setEditAgent(agent)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Modifier
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(agent.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Supprimer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

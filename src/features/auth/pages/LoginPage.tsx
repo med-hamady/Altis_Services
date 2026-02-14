@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -18,8 +18,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Logo } from '@/components/ui/logo'
 
 const loginSchema = z.object({
-  email: z.string().email('Adresse email invalide'),
-  password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
+  identifier: z.string().min(1, "Nom d'utilisateur obligatoire"),
+  password: z.string().min(1, 'Code PIN obligatoire'),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -49,12 +49,16 @@ export function LoginPage() {
     setIsLoading(true)
     setError(null)
 
-    const { error } = await signIn(data.email, data.password)
+    // Convertir username en email + préfixer le code PIN
+    const email = `${data.identifier.toLowerCase().trim()}@altis.local`
+    const password = `altis${data.password}`
+
+    const { error } = await signIn(email, password)
 
     if (error) {
       setError(
         error.message === 'Invalid login credentials'
-          ? 'Email ou mot de passe incorrect'
+          ? "Nom d'utilisateur ou code PIN incorrect"
           : error.message
       )
       setIsLoading(false)
@@ -84,32 +88,26 @@ export function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Nom d'utilisateur</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="votre@email.com"
-                {...register('email')}
+                id="identifier"
+                type="text"
+                placeholder="Ex: admin-altis"
+                {...register('identifier')}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+              {errors.identifier && (
+                <p className="text-sm text-destructive">{errors.identifier.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Mot de passe</Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-primary hover:underline"
-                >
-                  Mot de passe oublié ?
-                </Link>
-              </div>
+              <Label htmlFor="password">Code PIN</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="4 chiffres"
                 {...register('password')}
               />
               {errors.password && (

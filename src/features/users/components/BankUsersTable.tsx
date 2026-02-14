@@ -3,16 +3,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Plus, Building2, Pencil } from 'lucide-react'
-import { useBankUsers } from '../hooks/useUsers'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Plus, Building2, Pencil, Trash2, MoreVertical } from 'lucide-react'
+import { useBankUsers, useDeleteBankUser } from '../hooks/useUsers'
 import { BankUserDialog } from './BankUserDialog'
 import { EditBankUserDialog } from './EditBankUserDialog'
 import type { BankUser } from '@/types'
 
 export function BankUsersTable() {
   const { data: users, isLoading } = useBankUsers()
+  const deleteBankUser = useDeleteBankUser()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editUser, setEditUser] = useState<BankUser | null>(null)
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+      await deleteBankUser.mutateAsync(id)
+    }
+  }
 
   return (
     <Card>
@@ -41,7 +56,7 @@ export function BankUsersTable() {
               <TableRow>
                 <TableHead>Nom complet</TableHead>
                 <TableHead>Banque</TableHead>
-                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead className="hidden sm:table-cell">Utilisateur</TableHead>
                 <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -59,7 +74,7 @@ export function BankUsersTable() {
                   <TableCell>
                     {user.bank?.name || '—'}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{user.username || user.email.split('@')[0]}</TableCell>
                   <TableCell className="hidden md:table-cell">{user.phone || '—'}</TableCell>
                   <TableCell>
                     <Badge variant={user.is_active ? 'default' : 'secondary'}>
@@ -67,13 +82,29 @@ export function BankUsersTable() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditUser(user)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setEditUser(user)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(user.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

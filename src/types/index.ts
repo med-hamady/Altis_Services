@@ -26,6 +26,7 @@ import type {
 export interface Admin {
   id: string
   email: string
+  username: string | null
   full_name: string
   phone: string | null
   is_active: boolean
@@ -36,6 +37,7 @@ export interface Admin {
 export interface Agent {
   id: string
   email: string
+  username: string | null
   full_name: string
   phone: string | null
   sector: string | null
@@ -48,6 +50,7 @@ export interface Agent {
 export interface BankUser {
   id: string
   email: string
+  username: string | null
   full_name: string
   phone: string | null
   bank_id: string
@@ -262,6 +265,19 @@ export interface Promise {
   status_changed_by: string | null
   status_notes: string | null
   created_by: string
+  created_at: string
+}
+
+// =============================================================================
+// INFORMATIONS COMPLÉMENTAIRES
+// =============================================================================
+
+export interface CaseExtraInfo {
+  id: string
+  case_id: string
+  label: string
+  value: string
+  created_by: string | null
   created_at: string
 }
 

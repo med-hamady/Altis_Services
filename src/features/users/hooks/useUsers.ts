@@ -25,12 +25,11 @@ export function useCreateAdmin() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (admin: { email: string; password: string; full_name: string; phone?: string }) => {
-      // 1. Créer l'utilisateur dans auth.users
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    mutationFn: async (admin: { email: string; password: string; full_name: string; phone?: string; username?: string }) => {
+      // 1. Créer l'utilisateur via signUp (client isolé pour ne pas déconnecter l'admin)
+      const { data: authData, error: authError } = await supabaseAuth.auth.signUp({
         email: admin.email,
         password: admin.password,
-        email_confirm: true,
       })
 
       if (authError) throw authError
@@ -42,6 +41,7 @@ export function useCreateAdmin() {
         .insert([{
           id: authData.user.id,
           email: admin.email,
+          username: admin.username || null,
           full_name: admin.full_name,
           phone: admin.phone || null,
         } as never])
@@ -92,8 +92,9 @@ export function useDeleteAdmin() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // Supprimer l'utilisateur de auth (cascade sur admins)
-      const { error } = await supabase.auth.admin.deleteUser(id)
+      const { error } = await supabase.rpc('delete_auth_user' as never, {
+        target_user_id: id,
+      } as never)
       if (error) throw error
     },
     onSuccess: () => {
@@ -125,7 +126,7 @@ export function useCreateAgent() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (agent: { email: string; password: string; full_name: string; phone?: string; sector?: string; zone?: string }) => {
+    mutationFn: async (agent: { email: string; password: string; full_name: string; phone?: string; username?: string }) => {
       // 1. Créer l'utilisateur via signUp (client isolé pour ne pas déconnecter l'admin)
       const { data: authData, error: authError } = await supabaseAuth.auth.signUp({
         email: agent.email,
@@ -141,10 +142,9 @@ export function useCreateAgent() {
         .insert([{
           id: authData.user.id,
           email: agent.email,
+          username: agent.username || null,
           full_name: agent.full_name,
           phone: agent.phone || null,
-          sector: agent.sector || null,
-          zone: agent.zone || null,
         } as never])
         .select()
         .single()
@@ -193,7 +193,9 @@ export function useDeleteAgent() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(id)
+      const { error } = await supabase.rpc('delete_auth_user' as never, {
+        target_user_id: id,
+      } as never)
       if (error) throw error
     },
     onSuccess: () => {
@@ -225,7 +227,7 @@ export function useCreateBankUser() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (user: { email: string; password: string; full_name: string; phone?: string; bank_id: string; job_title?: string }) => {
+    mutationFn: async (user: { email: string; password: string; full_name: string; phone?: string; bank_id: string; job_title?: string; username?: string }) => {
       // 1. Créer l'utilisateur via signUp (client isolé pour ne pas déconnecter l'admin)
       const { data: authData, error: authError } = await supabaseAuth.auth.signUp({
         email: user.email,
@@ -241,6 +243,7 @@ export function useCreateBankUser() {
         .insert([{
           id: authData.user.id,
           email: user.email,
+          username: user.username || null,
           full_name: user.full_name,
           phone: user.phone || null,
           bank_id: user.bank_id,
@@ -293,7 +296,9 @@ export function useDeleteBankUser() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(id)
+      const { error } = await supabase.rpc('delete_auth_user' as never, {
+        target_user_id: id,
+      } as never)
       if (error) throw error
     },
     onSuccess: () => {

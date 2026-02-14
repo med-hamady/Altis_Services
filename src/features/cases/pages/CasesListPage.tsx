@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Plus, FolderKanban, Search, X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { usePermissions } from '@/contexts/AuthContext'
 import { useCases } from '../hooks/useCases'
 import { useBanks } from '@/features/banks/hooks/useBanks'
@@ -24,14 +24,26 @@ export function CasesListPage() {
   const { data: cases, isLoading } = useCases()
   const { data: banks } = useBanks()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { isAdmin, isAgent, isBankUser, bankId } = usePermissions()
   const [showCreateCase, setShowCreateCase] = useState(false)
   const canCreateCase = isAdmin || isBankUser
 
-  // Filtres
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedBankId, setSelectedBankId] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  // Filtres persistés dans l'URL
+  const searchQuery = searchParams.get('q') || ''
+  const selectedBankId = searchParams.get('bank') || 'all'
+  const selectedStatus = searchParams.get('status') || 'all'
+
+  const updateFilter = useCallback((key: string, value: string) => {
+    setSearchParams(prev => {
+      if (value === 'all' || value === '') {
+        prev.delete(key)
+      } else {
+        prev.set(key, value)
+      }
+      return prev
+    }, { replace: true })
+  }, [setSearchParams])
   // Filtrage des dossiers
   const filteredCases = useMemo(() => {
     if (!cases) return []
@@ -64,9 +76,7 @@ export function CasesListPage() {
   const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || searchQuery !== ''
 
   const clearFilters = () => {
-    setSearchQuery('')
-    setSelectedBankId('all')
-    setSelectedStatus('all')
+    setSearchParams({}, { replace: true })
   }
 
   const formatAmount = (amount: number) => {
@@ -109,7 +119,7 @@ export function CasesListPage() {
                 <Input
                   placeholder="Référence, débiteur, banque..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => updateFilter('q', e.target.value)}
                   className="pl-9"
                 />
               </div>
@@ -119,7 +129,7 @@ export function CasesListPage() {
             {!isBankUser && (
               <div className="w-full sm:w-[200px] space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Banque</label>
-                <Select value={selectedBankId} onValueChange={setSelectedBankId}>
+                <Select value={selectedBankId} onValueChange={(v) => updateFilter('bank', v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Toutes les banques" />
                   </SelectTrigger>
@@ -138,7 +148,7 @@ export function CasesListPage() {
             {/* Filtre par statut */}
             <div className="w-full sm:w-[180px] space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Statut</label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Select value={selectedStatus} onValueChange={(v) => updateFilter('status', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
