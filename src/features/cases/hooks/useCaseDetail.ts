@@ -419,7 +419,7 @@ export function useCaseExtraInfo(caseId: string | undefined) {
     queryKey: ['cases', caseId, 'extra_info'],
     queryFn: async (): Promise<CaseExtraInfo[]> => {
       const { data, error } = await supabase
-        .rpc('get_case_extra_info', { p_case_id: caseId! })
+        .rpc('get_case_extra_info' as never, { p_case_id: caseId! } as never)
 
       if (error) throw error
       return data as CaseExtraInfo[]
@@ -434,11 +434,11 @@ export function useCreateExtraInfo() {
   return useMutation({
     mutationFn: async (input: { case_id: string; label: string; value: string }) => {
       const { data, error } = await supabase
-        .rpc('create_case_extra_info', {
+        .rpc('create_case_extra_info' as never, {
           p_case_id: input.case_id,
           p_label: input.label,
           p_value: input.value,
-        })
+        } as never)
 
       if (error) throw error
       return data as CaseExtraInfo
@@ -455,7 +455,7 @@ export function useDeleteExtraInfo() {
   return useMutation({
     mutationFn: async ({ id, case_id: _caseId }: { id: string; case_id: string }) => {
       const { error } = await supabase
-        .rpc('delete_case_extra_info', { p_id: id })
+        .rpc('delete_case_extra_info' as never, { p_id: id } as never)
 
       if (error) throw error
     },
