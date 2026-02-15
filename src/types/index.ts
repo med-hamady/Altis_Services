@@ -187,6 +187,7 @@ export interface Case {
 
   guarantee_type: string | null
   guarantee_description: string | null
+  has_guarantee: boolean
 
   last_bank_payment_date: string | null
   last_bank_payment_amount: number | null

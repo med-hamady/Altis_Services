@@ -9,6 +9,7 @@ export interface AdminStats {
   casesInProgress: number
   activeBanks: number
   activeAgents: number
+  casesWithGuarantee: number
 }
 
 export interface AgentStats {
@@ -54,11 +55,18 @@ export function useAdminStats(enabled: boolean = true) {
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true)
 
+      // Dossiers avec garantie
+      const { count: casesWithGuarantee } = await supabase
+        .from('cases')
+        .select('*', { count: 'exact', head: true })
+        .eq('has_guarantee', true)
+
       return {
         totalCases: totalCases || 0,
         casesInProgress: casesInProgress || 0,
         activeBanks: activeBanks || 0,
         activeAgents: activeAgents || 0,
+        casesWithGuarantee: casesWithGuarantee || 0,
       }
     },
     refetchInterval: 30000, // Rafraîchir toutes les 30 secondes

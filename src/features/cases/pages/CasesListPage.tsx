@@ -33,6 +33,7 @@ export function CasesListPage() {
   const searchQuery = searchParams.get('q') || ''
   const selectedBankId = searchParams.get('bank') || 'all'
   const selectedStatus = searchParams.get('status') || 'all'
+  const selectedGuarantee = searchParams.get('guarantee') || 'all'
 
   const updateFilter = useCallback((key: string, value: string) => {
     setSearchParams(prev => {
@@ -55,6 +56,13 @@ export function CasesListPage() {
       // Filtre par statut
       if (selectedStatus !== 'all' && c.status !== selectedStatus) return false
 
+      // Filtre par garantie
+      if (selectedGuarantee !== 'all') {
+        const hasGuarantee = c.has_guarantee
+        if (selectedGuarantee === 'yes' && !hasGuarantee) return false
+        if (selectedGuarantee === 'no' && hasGuarantee) return false
+      }
+
       // Filtre par recherche (référence, nom débiteur)
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
@@ -71,9 +79,9 @@ export function CasesListPage() {
 
       return true
     })
-  }, [cases, selectedBankId, selectedStatus, searchQuery])
+  }, [cases, selectedBankId, selectedStatus, selectedGuarantee, searchQuery])
 
-  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || searchQuery !== ''
+  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || selectedGuarantee !== 'all' || searchQuery !== ''
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true })
@@ -159,6 +167,21 @@ export function CasesListPage() {
                       {label}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtre par garantie */}
+            <div className="w-full sm:w-[180px] space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Garantie</label>
+              <Select value={selectedGuarantee} onValueChange={(v) => updateFilter('guarantee', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Toutes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="yes">Avec garantie</SelectItem>
+                  <SelectItem value="no">Sans garantie</SelectItem>
                 </SelectContent>
               </Select>
             </div>

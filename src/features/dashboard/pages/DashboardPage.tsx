@@ -207,34 +207,45 @@ export function DashboardPage() {
 
       {/* Statistiques - Admin */}
       {isAdmin && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total dossiers"
-            value={adminStats?.totalCases || 0}
-            description="Tous statuts confondus"
-            icon={FolderKanban}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Dossiers en cours"
-            value={adminStats?.casesInProgress || 0}
-            description="Nécessitant une action"
-            icon={Clock}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Banques actives"
-            value={adminStats?.activeBanks || 0}
-            icon={Building2}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Agents actifs"
-            value={adminStats?.activeAgents || 0}
-            icon={Users}
-            isLoading={isLoading}
-          />
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total dossiers"
+              value={adminStats?.totalCases || 0}
+              description="Tous statuts confondus"
+              icon={FolderKanban}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Dossiers en cours"
+              value={adminStats?.casesInProgress || 0}
+              description="Nécessitant une action"
+              icon={Clock}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Banques actives"
+              value={adminStats?.activeBanks || 0}
+              icon={Building2}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Agents actifs"
+              value={adminStats?.activeAgents || 0}
+              icon={Users}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Dossiers avec garantie"
+              value={adminStats?.casesWithGuarantee || 0}
+              description="Sûretés et garanties"
+              icon={Handshake}
+              isLoading={isLoading}
+            />
+          </div>
+        </>
       )}
 
       {/* Statistiques - Agent */}
