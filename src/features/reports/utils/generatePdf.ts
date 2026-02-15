@@ -284,6 +284,7 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
 
     return [
       c.reference || '-',
+      isPM ? (c.debtor_pm?.rc_number || '-') : (c.debtor_pp?.id_number || '-'),
       isPM ? 'PM' : 'PP',
       debtorName,
       rc,
@@ -303,6 +304,7 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
     startY: yPos,
     head: [[
       'Ref.',
+      'N° Client',
       'Type',
       'Debiteur',
       'RC/NIF',
@@ -334,19 +336,20 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
     },
     alternateRowStyles: { fillColor: [245, 248, 252] },
     columnStyles: {
-      0: { cellWidth: 20 },
-      1: { cellWidth: 10 },
-      2: { cellWidth: 35 },
-      3: { cellWidth: 22 },
-      4: { cellWidth: 24 },
-      5: { cellWidth: 32 },
-      6: { cellWidth: 22, halign: 'right' },
+      0: { cellWidth: 18 },
+      1: { cellWidth: 18 },
+      2: { cellWidth: 10 },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 18 },
+      5: { cellWidth: 22 },
+      6: { cellWidth: 28 },
       7: { cellWidth: 20, halign: 'right' },
-      8: { cellWidth: 20, halign: 'right' },
+      8: { cellWidth: 18, halign: 'right' },
       9: { cellWidth: 18, halign: 'right' },
-      10: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
-      11: { cellWidth: 24, halign: 'right', textColor: RED },
-      12: { cellWidth: 18 },
+      10: { cellWidth: 16, halign: 'right' },
+      11: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },
+      12: { cellWidth: 22, halign: 'right', textColor: RED },
+      13: { cellWidth: 16 },
     },
   })
 
