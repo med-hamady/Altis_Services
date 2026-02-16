@@ -225,16 +225,6 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
 
   let yPos = 48
 
-  // Section Resume - titre avec ligne
-  doc.setTextColor(NAVY[0], NAVY[1], NAVY[2])
-  doc.setFontSize(13)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Resume', 14, yPos)
-  doc.setDrawColor(NAVY[0], NAVY[1], NAVY[2])
-  doc.setLineWidth(0.8)
-  doc.line(14, yPos + 2, 50, yPos + 2)
-  yPos += 8
-
   // Boites de stats - ligne 1
   const boxWidth = (pageWidth - 28 - 25) / 6 // 6 boxes avec espaces
   const boxHeight = 20
@@ -249,15 +239,6 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
 
   yPos += boxHeight + 10
 
-  // Titre du tableau
-  doc.setTextColor(NAVY[0], NAVY[1], NAVY[2])
-  doc.setFontSize(13)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Liste detaillee des dossiers', 14, yPos)
-  doc.setLineWidth(0.8)
-  doc.line(14, yPos + 2, 80, yPos + 2)
-  yPos += 8
-
   // Donnees du tableau financier
   const casesData = data.cases.map((c) => {
     const isPM = c.debtor_pm !== null
@@ -266,14 +247,12 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
       : c.debtor_pm?.company_name || '-'
 
     const phone = isPM
-      ? c.debtor_pm?.phone_primary || '-'
-      : c.debtor_pp?.phone_primary || '-'
+      ? c.debtor_pm?.phone_primary
+      : c.debtor_pp?.phone_primary
 
     const email = isPM
-      ? c.debtor_pm?.email || '-'
-      : c.debtor_pp?.email || '-'
-
-    const rc = isPM ? c.debtor_pm?.rc_number || '-' : '-'
+      ? c.debtor_pm?.email
+      : c.debtor_pp?.email
 
     const principal = Math.abs(Number(c.amount_principal) || 0)
     const interest = Math.abs(Number(c.amount_interest) || 0)
@@ -287,14 +266,9 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
       isPM ? (c.debtor_pm?.rc_number || '-') : (c.debtor_pp?.id_number || '-'),
       isPM ? 'PM' : 'PP',
       debtorName,
-      rc,
-      phone,
-      email,
+      phone ? 'Oui' : 'Non',
+      email ? 'Oui' : 'Non',
       c.has_guarantee ? 'Oui' : 'Non',
-      formatAmount(principal),
-      formatAmount(interest),
-      formatAmount(penalties),
-      formatAmount(fees),
       formatAmount(total),
       formatAmount(remaining),
       statusLabels[c.status] || c.status,
@@ -307,16 +281,11 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
       'Ref.',
       'N° Client',
       'Type',
-      'Debiteur',
-      'RC/NIF',
-      'Telephone',
+      'Nom ou Raison Sociale',
+      'Tel',
       'Email',
       'Garantie',
-      'Principal',
-      'Interets',
-      'Penalites',
-      'Frais',
-      'Total',
+      'Montant Total a recouvrer',
       'Solde restant',
       'Statut',
     ]],
@@ -338,111 +307,16 @@ export async function generateBankReportPdf(data: BankReportData): Promise<void>
     },
     alternateRowStyles: { fillColor: [245, 248, 252] },
     columnStyles: {
-      0: { cellWidth: 18 },
-      1: { cellWidth: 17 },
-      2: { cellWidth: 9 },
-      3: { cellWidth: 28 },
-      4: { cellWidth: 16 },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 26 },
-      7: { cellWidth: 12, halign: 'center' },
-      8: { cellWidth: 18, halign: 'right' },
-      9: { cellWidth: 16, halign: 'right' },
-      10: { cellWidth: 16, halign: 'right' },
-      11: { cellWidth: 15, halign: 'right' },
-      12: { cellWidth: 18, halign: 'right', fontStyle: 'bold' },
-      13: { cellWidth: 20, halign: 'right', textColor: RED },
-      14: { cellWidth: 15 },
-    },
-  })
-
-  // ==================== PAGE 2 : DETAILS CONTACTS ====================
-  doc.addPage('l')
-  drawHeader(doc, pageWidth, altisLogo, bankLogo, data)
-
-  yPos = 48
-
-  doc.setTextColor(NAVY[0], NAVY[1], NAVY[2])
-  doc.setFontSize(13)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Details des contacts et adresses', 14, yPos)
-  doc.setDrawColor(NAVY[0], NAVY[1], NAVY[2])
-  doc.setLineWidth(0.8)
-  doc.line(14, yPos + 2, 90, yPos + 2)
-  yPos += 8
-
-  const contactsData = data.cases.map((c) => {
-    const isPM = c.debtor_pm !== null
-    const debtorName = c.debtor_pp
-      ? `${c.debtor_pp.first_name} ${c.debtor_pp.last_name}`
-      : c.debtor_pm?.company_name || '-'
-
-    const phone = isPM
-      ? c.debtor_pm?.phone_primary || '-'
-      : c.debtor_pp?.phone_primary || '-'
-
-    const email = isPM
-      ? c.debtor_pm?.email || '-'
-      : c.debtor_pp?.email || '-'
-
-    const street = isPM
-      ? c.debtor_pm?.address_street || '-'
-      : c.debtor_pp?.address_street || '-'
-
-    const city = isPM
-      ? c.debtor_pm?.address_city || '-'
-      : c.debtor_pp?.address_city || '-'
-
-    return [
-      c.reference || '-',
-      debtorName,
-      phone,
-      email,
-      street,
-      city,
-      c.contract_reference || '-',
-      c.default_date || '-',
-    ]
-  })
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [[
-      'Reference',
-      'Debiteur',
-      'Telephone',
-      'Email',
-      'Adresse',
-      'Ville',
-      'Ref. Contrat',
-      'Date defaut',
-    ]],
-    body: contactsData,
-    margin: { left: 10, right: 10 },
-    styles: {
-      fontSize: 8,
-      cellPadding: 2.5,
-      textColor: DARK,
-      lineColor: [220, 225, 230],
-      lineWidth: 0.2,
-    },
-    headStyles: {
-      fillColor: NAVY,
-      textColor: WHITE,
-      fontSize: 8,
-      fontStyle: 'bold',
-      cellPadding: 3,
-    },
-    alternateRowStyles: { fillColor: [245, 248, 252] },
-    columnStyles: {
-      0: { cellWidth: 25 },
-      1: { cellWidth: 45 },
-      2: { cellWidth: 32 },
-      3: { cellWidth: 45 },
-      4: { cellWidth: 50 },
-      5: { cellWidth: 35 },
-      6: { cellWidth: 28 },
-      7: { cellWidth: 25 },
+      0: { cellWidth: 24 },
+      1: { cellWidth: 24 },
+      2: { cellWidth: 14 },
+      3: { cellWidth: 70 },
+      4: { cellWidth: 16, halign: 'center' },
+      5: { cellWidth: 16, halign: 'center' },
+      6: { cellWidth: 18, halign: 'center' },
+      7: { cellWidth: 38, halign: 'right', fontStyle: 'bold' },
+      8: { cellWidth: 35, halign: 'right', textColor: RED },
+      9: { cellWidth: 22 },
     },
   })
 
