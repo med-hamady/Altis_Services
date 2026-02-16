@@ -1093,6 +1093,9 @@ export function CaseDetailPage() {
         }}
         remainingBalance={remainingBalance}
         defaultAmount={paymentDefaultAmount}
+        caseReference={caseData.reference}
+        debtorName={debtorName}
+        bankName={caseData.bank?.name}
       />
       <EditCaseDialog
         caseData={caseData}

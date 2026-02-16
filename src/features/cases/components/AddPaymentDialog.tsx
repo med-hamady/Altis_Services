@@ -30,6 +30,7 @@ import { Upload, X, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { usePermissions } from '@/contexts/AuthContext'
 import { useCreatePayment } from '../hooks/useCaseDetail'
+import { sendEmail } from '@/lib/email'
 
 const PAYMENT_METHODS = [
   { value: 'virement', label: 'Virement' },
@@ -54,9 +55,15 @@ interface AddPaymentDialogProps {
   remainingBalance?: number
   /** Montant pré-rempli (ex: depuis une promesse tenue) */
   defaultAmount?: number
+  /** Référence du dossier (pour la notification email) */
+  caseReference?: string
+  /** Nom du débiteur (pour la notification email) */
+  debtorName?: string
+  /** Nom de la banque (pour la notification email) */
+  bankName?: string
 }
 
-export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance, defaultAmount }: AddPaymentDialogProps) {
+export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance, defaultAmount, caseReference, debtorName, bankName }: AddPaymentDialogProps) {
   const createPayment = useCreatePayment()
   const { isAdmin } = usePermissions()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -136,9 +143,12 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance,
         receiptPath = path
       }
 
+      const amount = parseFloat(data.amount)
+      const method = PAYMENT_METHODS.find(m => m.value === data.payment_method)?.label || data.payment_method
+
       await createPayment.mutateAsync({
         case_id: caseId,
-        amount: parseFloat(data.amount),
+        amount,
         payment_date: data.payment_date,
         payment_method: data.payment_method || undefined,
         transaction_reference: data.transaction_reference || undefined,
@@ -152,6 +162,41 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance,
       )
       onOpenChange(false)
       form.reset()
+
+      // Notification email aux admins (fire-and-forget, ne bloque pas le flux)
+      if (!isAdmin) {
+        supabase
+          .from('admins')
+          .select('email')
+          .eq('is_active', true)
+          .then(({ data: admins }) => {
+            const emails = admins?.map(a => a.email).filter(Boolean) as string[] | undefined
+            if (emails && emails.length > 0) {
+              sendEmail({
+                to: emails,
+                subject: `Nouveau paiement déclaré — Dossier ${caseReference || caseId}`,
+                html: `
+                  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+                    <h2 style="color:#1a56db;margin-bottom:16px">Nouveau paiement à valider</h2>
+                    <table style="width:100%;border-collapse:collapse">
+                      <tr><td style="padding:8px 0;color:#6b7280">Dossier</td><td style="padding:8px 0;font-weight:600">${caseReference || caseId}</td></tr>
+                      <tr><td style="padding:8px 0;color:#6b7280">Débiteur</td><td style="padding:8px 0;font-weight:600">${debtorName || '—'}</td></tr>
+                      <tr><td style="padding:8px 0;color:#6b7280">Banque</td><td style="padding:8px 0;font-weight:600">${bankName || '—'}</td></tr>
+                      <tr><td style="padding:8px 0;color:#6b7280">Montant</td><td style="padding:8px 0;font-weight:600">${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MRU', minimumFractionDigits: 0 }).format(amount)}</td></tr>
+                      <tr><td style="padding:8px 0;color:#6b7280">Date</td><td style="padding:8px 0">${data.payment_date}</td></tr>
+                      <tr><td style="padding:8px 0;color:#6b7280">Mode</td><td style="padding:8px 0">${method}</td></tr>
+                      ${data.transaction_reference ? `<tr><td style="padding:8px 0;color:#6b7280">Référence</td><td style="padding:8px 0">${data.transaction_reference}</td></tr>` : ''}
+                    </table>
+                    <p style="margin-top:20px;color:#6b7280;font-size:14px">Connectez-vous à la plateforme pour valider ou rejeter ce paiement.</p>
+                    <p style="margin-top:8px;color:#9ca3af;font-size:12px">— Altis Services</p>
+                  </div>
+                `,
+              }).catch(() => {
+                // Silencieux : l'email est secondaire, ne pas bloquer l'UX
+              })
+            }
+          })
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur inconnue'
       setServerError(message)
