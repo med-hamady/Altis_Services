@@ -34,62 +34,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Charger le profil utilisateur (essayer dans les 3 tables)
+  // Charger le profil utilisateur via RPC
   const fetchUserProfile = useCallback(async (userId: string): Promise<CurrentUser | null> => {
-    // 1. Vérifier dans admins
-    const { data: adminData, error: adminError } = await supabase
-      .from('admins')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
+    const { data, error } = await supabase
+      .rpc('get_user_profile' as never, { p_user_id: userId } as never)
 
-    console.log('Admin query:', { adminData, adminError })
-
-    if (!adminError && adminData) {
-      const admin = adminData as Admin
-      if (!admin.is_active) {
-        throw new Error('Ce compte administrateur a été désactivé')
-      }
-      return { ...admin, userType: 'admin' as const }
+    if (error) {
+      console.error('Erreur get_user_profile:', error)
+      return null
     }
 
-    // 2. Vérifier dans agents
-    const { data: agentData, error: agentError } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-
-    console.log('Agent query:', { agentData, agentError })
-
-    if (!agentError && agentData) {
-      const agent = agentData as Agent
-      if (!agent.is_active) {
-        throw new Error('Ce compte agent a été désactivé')
-      }
-      return { ...agent, userType: 'agent' as const }
+    if (!data) {
+      console.error('Aucun profil trouvé pour userId:', userId)
+      return null
     }
 
-    // 3. Vérifier dans bank_users
-    const { data: bankUserData, error: bankUserError } = await supabase
-      .from('bank_users')
-      .select('*, bank:banks(*)')
-      .eq('id', userId)
-      .maybeSingle()
+    const result = data as { userType: string; profile: Record<string, unknown> }
+    const profile = result.profile
+    const userType = result.userType as 'admin' | 'agent' | 'bank_user'
 
-    console.log('Bank user query:', { bankUserData, bankUserError })
-
-    if (!bankUserError && bankUserData) {
-      const bankUser = bankUserData as BankUser
-      if (!bankUser.is_active) {
-        throw new Error('Ce compte utilisateur banque a été désactivé')
-      }
-      return { ...bankUser, userType: 'bank_user' as const }
+    if (!(profile as { is_active: boolean }).is_active) {
+      const labels = { admin: 'administrateur', agent: 'agent', bank_user: 'utilisateur banque' }
+      throw new Error(`Ce compte ${labels[userType]} a été désactivé`)
     }
 
-    // Aucun profil trouvé
-    console.error('Aucun profil trouvé pour userId:', userId)
-    return null
+    return { ...profile, userType } as CurrentUser
   }, [])
 
   // Initialiser l'authentification

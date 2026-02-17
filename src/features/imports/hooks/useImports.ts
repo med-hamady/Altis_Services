@@ -8,12 +8,10 @@ export function useImports() {
     queryKey: ['imports'],
     queryFn: async (): Promise<Import[]> => {
       const { data, error } = await supabase
-        .from('imports')
-        .select('*, bank:banks(*)')
-        .order('created_at', { ascending: false })
+        .rpc('list_imports' as never)
 
       if (error) throw error
-      return data as Import[]
+      return (data ?? []) as Import[]
     },
   })
 }
@@ -26,10 +24,7 @@ export function useImport(id: string | null) {
       if (!id) return null
 
       const { data, error } = await supabase
-        .from('imports')
-        .select('*, bank:banks(*)')
-        .eq('id', id)
-        .single()
+        .rpc('get_import' as never, { p_import_id: id } as never)
 
       if (error) throw error
       return data as Import
@@ -54,13 +49,10 @@ export function useImportRows(importId: string | null) {
       if (!importId) return []
 
       const { data, error } = await supabase
-        .from('import_rows')
-        .select('*')
-        .eq('import_id', importId)
-        .order('row_number')
+        .rpc('list_import_rows' as never, { p_import_id: importId } as never)
 
       if (error) throw error
-      return data as ImportRow[]
+      return (data ?? []) as ImportRow[]
     },
     enabled: !!importId,
   })
@@ -72,24 +64,19 @@ export function useCreateImport() {
 
   return useMutation({
     mutationFn: async ({ bankId, file, userId }: { bankId: string; file: File; userId: string }): Promise<Import> => {
-      // 1. Create import record
+      // 1. Create import record via RPC
       const { data: importRecord, error: insertError } = await supabase
-        .from('imports')
-        .insert({
-          bank_id: bankId,
-          uploaded_by: userId,
-          file_path: '', // Will be updated after upload
-          file_name: file.name,
-          status: 'uploaded',
+        .rpc('create_import' as never, {
+          p_bank_id: bankId,
+          p_uploaded_by: userId,
+          p_file_name: file.name,
         } as never)
-        .select()
-        .single()
 
       if (insertError) throw insertError
 
       const typedRecord = importRecord as unknown as { id: string }
 
-      // 2. Upload file to storage
+      // 2. Upload file to storage (conservé tel quel)
       const filePath = `${bankId}/${typedRecord.id}.xlsx`
       const { error: uploadError } = await supabase.storage
         .from('imports')
@@ -99,18 +86,17 @@ export function useCreateImport() {
         })
 
       if (uploadError) {
-        // Cleanup: delete the import record
-        await supabase.from('imports').delete().eq('id', typedRecord.id)
+        // Cleanup: delete the import record via RPC
+        await supabase.rpc('delete_import' as never, { p_import_id: typedRecord.id } as never)
         throw uploadError
       }
 
-      // 3. Update file_path
+      // 3. Update file_path via RPC
       const { data: updated, error: updateError } = await supabase
-        .from('imports')
-        .update({ file_path: filePath } as never)
-        .eq('id', typedRecord.id)
-        .select('*, bank:banks(*)')
-        .single()
+        .rpc('update_import_file_path' as never, {
+          p_import_id: typedRecord.id,
+          p_file_path: filePath,
+        } as never)
 
       if (updateError) throw updateError
       return updated as Import
@@ -121,7 +107,7 @@ export function useCreateImport() {
   })
 }
 
-// Mutation: Lancer le traitement (appel Edge Function)
+// Mutation: Lancer le traitement (appel Edge Function — conservé tel quel)
 export function useProcessImport() {
   const queryClient = useQueryClient()
 
@@ -149,9 +135,10 @@ export function useToggleRowApproval() {
   return useMutation({
     mutationFn: async ({ rowId, isApproved }: { rowId: string; isApproved: boolean }) => {
       const { error } = await supabase
-        .from('import_rows')
-        .update({ is_approved: isApproved } as never)
-        .eq('id', rowId)
+        .rpc('toggle_import_row_approval' as never, {
+          p_row_id: rowId,
+          p_is_approved: isApproved,
+        } as never)
 
       if (error) throw error
     },
@@ -167,25 +154,8 @@ export function useApproveAllValidRows() {
 
   return useMutation({
     mutationFn: async (importId: string) => {
-      // Approve rows with no errors
-      const { data: rows } = await supabase
-        .from('import_rows')
-        .select('id, errors')
-        .eq('import_id', importId)
-
-      if (!rows) return
-
-      const typedRows = rows as unknown as { id: string; errors: unknown[] | null }[]
-      const validIds = typedRows
-        .filter((r) => !r.errors || r.errors.length === 0)
-        .map((r) => r.id)
-
-      if (validIds.length === 0) return
-
       const { error } = await supabase
-        .from('import_rows')
-        .update({ is_approved: true } as never)
-        .in('id', validIds)
+        .rpc('approve_all_valid_rows' as never, { p_import_id: importId } as never)
 
       if (error) throw error
     },
@@ -202,9 +172,10 @@ export function useUpdateImportRow() {
   return useMutation({
     mutationFn: async ({ rowId, proposedJson }: { rowId: string; proposedJson: Record<string, unknown> }) => {
       const { error } = await supabase
-        .from('import_rows')
-        .update({ proposed_json: proposedJson } as never)
-        .eq('id', rowId)
+        .rpc('update_import_row' as never, {
+          p_row_id: rowId,
+          p_proposed_json: proposedJson,
+        } as never)
 
       if (error) throw error
     },
@@ -221,34 +192,17 @@ export function useCasesByImport(importId: string | null, status: string | undef
     queryFn: async (): Promise<Case[]> => {
       if (!importId) return []
 
-      // 1. Trouver les IDs des cases créés via audit_logs
-      const { data: logs, error: logsError } = await supabase
-        .from('audit_logs')
-        .select('record_id')
-        .eq('table_name', 'cases')
-        .eq('operation', 'INSERT')
-        .contains('new_data', { source: 'import', import_id: importId })
+      const { data, error } = await supabase
+        .rpc('get_cases_by_import' as never, { p_import_id: importId } as never)
 
-      if (logsError || !logs || logs.length === 0) return []
-
-      const typedLogs = logs as unknown as { record_id: string }[]
-      const caseIds = typedLogs.map((l) => l.record_id)
-
-      // 2. Charger les cases avec les relations
-      const { data: cases, error: casesError } = await supabase
-        .from('cases')
-        .select('*, bank:banks(id, name), debtor_pp:debtors_pp(id, first_name, last_name), debtor_pm:debtors_pm(id, company_name)')
-        .in('id', caseIds)
-        .order('created_at', { ascending: true })
-
-      if (casesError) throw casesError
-      return (cases || []) as Case[]
+      if (error) throw error
+      return (data ?? []) as Case[]
     },
     enabled: !!importId && status === 'approved',
   })
 }
 
-// Mutation: Finaliser l'import (créer les dossiers)
+// Mutation: Finaliser l'import (créer les dossiers — Edge Function conservée)
 export function useFinalizeImport() {
   const queryClient = useQueryClient()
 

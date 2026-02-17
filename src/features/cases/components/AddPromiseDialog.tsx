@@ -20,27 +20,11 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useCreatePromise } from '../hooks/useCaseDetail'
-
-const PAYMENT_METHODS = [
-  { value: 'virement', label: 'Virement' },
-  { value: 'especes', label: 'Espèces' },
-  { value: 'cheque', label: 'Chèque' },
-  { value: 'mobile_money', label: 'Mobile money' },
-  { value: 'autre', label: 'Autre' },
-]
 
 interface PromiseFormData {
   amount: string
   due_date: string
-  payment_method: string
   reference: string
   notes: string
 }
@@ -61,7 +45,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
     defaultValues: {
       amount: '',
       due_date: '',
-      payment_method: '',
       reference: '',
       notes: '',
     },
@@ -75,7 +58,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
       form.reset({
         amount: '',
         due_date: tomorrow.toISOString().slice(0, 10),
-        payment_method: '',
         reference: '',
         notes: '',
       })
@@ -90,7 +72,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
         case_id: caseId,
         amount: parseFloat(data.amount),
         due_date: data.due_date,
-        payment_method: data.payment_method || undefined,
         reference: data.reference || undefined,
         notes: data.notes || undefined,
       })
@@ -174,29 +155,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="payment_method"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mode de paiement</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un mode" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}

@@ -9,16 +9,7 @@ export function useCaseDetail(id: string | undefined) {
     queryKey: ['cases', id],
     queryFn: async (): Promise<Case> => {
       const { data, error } = await supabase
-        .from('cases')
-        .select(`
-          *,
-          bank:banks(*),
-          debtor_pp:debtors_pp(*),
-          debtor_pm:debtors_pm(*),
-          assigned_agent:agents(*)
-        `)
-        .eq('id', id!)
-        .single()
+        .rpc('get_case_detail' as never, { p_case_id: id! } as never)
 
       if (error) throw error
       return data as Case
@@ -33,14 +24,10 @@ export function useAssignAgent() {
   return useMutation({
     mutationFn: async ({ caseId, agentId }: { caseId: string; agentId: string | null }) => {
       const { data, error } = await supabase
-        .from('cases')
-        .update({
-          assigned_agent_id: agentId,
-          status: agentId ? 'assigned' : 'new',
+        .rpc('assign_agent' as never, {
+          p_case_id: caseId,
+          p_agent_id: agentId,
         } as never)
-        .eq('id', caseId)
-        .select()
-        .single()
 
       if (error) throw error
       return data as Case
@@ -78,23 +65,16 @@ export function useUpdateCase() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: UpdateCaseInput) => {
       const { data, error } = await supabase
-        .from('cases')
-        .update(updates as never)
-        .eq('id', id)
-        .select(`
-          *,
-          bank:banks(*),
-          debtor_pp:debtors_pp(*),
-          debtor_pm:debtors_pm(*),
-          assigned_agent:agents(*)
-        `)
-        .single()
+        .rpc('update_case' as never, {
+          p_case_id: id,
+          p_data: updates,
+        } as never)
 
       if (error) throw error
       return data as Case
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['cases', data.id] })
+      queryClient.invalidateQueries({ queryKey: ['cases', (data as Case).id] })
       queryClient.invalidateQueries({ queryKey: ['cases'] })
     },
   })
@@ -105,13 +85,10 @@ export function useCaseActions(caseId: string | undefined) {
     queryKey: ['cases', caseId, 'actions'],
     queryFn: async (): Promise<Action[]> => {
       const { data, error } = await supabase
-        .from('actions')
-        .select('*')
-        .eq('case_id', caseId!)
-        .order('action_date', { ascending: false })
+        .rpc('list_case_actions' as never, { p_case_id: caseId! } as never)
 
       if (error) throw error
-      return data as Action[]
+      return (data ?? []) as Action[]
     },
     enabled: !!caseId,
   })
@@ -122,13 +99,10 @@ export function useCasePromises(caseId: string | undefined) {
     queryKey: ['cases', caseId, 'promises'],
     queryFn: async (): Promise<CasePromise[]> => {
       const { data, error } = await supabase
-        .from('promises')
-        .select('*')
-        .eq('case_id', caseId!)
-        .order('due_date', { ascending: false })
+        .rpc('list_case_promises' as never, { p_case_id: caseId! } as never)
 
       if (error) throw error
-      return data as CasePromise[]
+      return (data ?? []) as CasePromise[]
     },
     enabled: !!caseId,
   })
@@ -139,13 +113,10 @@ export function useCasePayments(caseId: string | undefined) {
     queryKey: ['cases', caseId, 'payments'],
     queryFn: async (): Promise<Payment[]> => {
       const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('case_id', caseId!)
-        .order('payment_date', { ascending: false })
+        .rpc('list_case_payments' as never, { p_case_id: caseId! } as never)
 
       if (error) throw error
-      return data as Payment[]
+      return (data ?? []) as Payment[]
     },
     enabled: !!caseId,
   })
@@ -156,13 +127,10 @@ export function useCaseDocuments(caseId: string | undefined) {
     queryKey: ['cases', caseId, 'documents'],
     queryFn: async (): Promise<Document[]> => {
       const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('case_id', caseId!)
-        .order('uploaded_at', { ascending: false })
+        .rpc('list_case_documents' as never, { p_case_id: caseId! } as never)
 
       if (error) throw error
-      return data as Document[]
+      return (data ?? []) as Document[]
     },
     enabled: !!caseId,
   })
@@ -188,14 +156,17 @@ export function useCreateAction() {
 
   return useMutation({
     mutationFn: async (input: CreateActionInput) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Utilisateur non authentifié')
-
       const { data, error } = await supabase
-        .from('actions')
-        .insert([{ ...input, created_by: user.id } as never])
-        .select()
-        .single()
+        .rpc('create_action' as never, {
+          p_case_id: input.case_id,
+          p_action_type: input.action_type,
+          p_action_date: input.action_date,
+          p_result: input.result,
+          p_notes: input.notes || null,
+          p_next_action_type: input.next_action_type || null,
+          p_next_action_date: input.next_action_date || null,
+          p_next_action_notes: input.next_action_notes || null,
+        } as never)
 
       if (error) throw error
       return data as Action
@@ -226,14 +197,15 @@ export function useCreatePromise() {
 
   return useMutation({
     mutationFn: async (input: CreatePromiseInput) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Utilisateur non authentifié')
-
       const { data, error } = await supabase
-        .from('promises')
-        .insert([{ ...input, created_by: user.id } as never])
-        .select()
-        .single()
+        .rpc('create_promise' as never, {
+          p_case_id: input.case_id,
+          p_amount: input.amount,
+          p_due_date: input.due_date,
+          p_payment_method: input.payment_method || null,
+          p_reference: input.reference || null,
+          p_notes: input.notes || null,
+        } as never)
 
       if (error) throw error
       return data as CasePromise
@@ -264,26 +236,13 @@ export function useUpdatePromiseStatus() {
 
   return useMutation({
     mutationFn: async (input: UpdatePromiseStatusInput) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Utilisateur non authentifié')
-
-      const updateData: Record<string, unknown> = {
-        status: input.status,
-        status_changed_at: new Date().toISOString(),
-        status_changed_by: user.id,
-        status_notes: input.status_notes || null,
-      }
-
-      if (input.status === 'rescheduled' && input.new_due_date) {
-        updateData.due_date = input.new_due_date
-      }
-
       const { data, error } = await supabase
-        .from('promises')
-        .update(updateData as never)
-        .eq('id', input.promise_id)
-        .select()
-        .single()
+        .rpc('update_promise_status' as never, {
+          p_promise_id: input.promise_id,
+          p_status: input.status,
+          p_status_notes: input.status_notes || null,
+          p_new_due_date: input.new_due_date || null,
+        } as never)
 
       if (error) throw error
       return data as CasePromise
@@ -302,9 +261,7 @@ export function useDeletePromise() {
   return useMutation({
     mutationFn: async ({ promise_id, case_id: _caseId }: { promise_id: string; case_id: string }) => {
       const { error } = await supabase
-        .from('promises')
-        .delete()
-        .eq('id', promise_id)
+        .rpc('delete_promise' as never, { p_promise_id: promise_id } as never)
 
       if (error) throw error
     },
@@ -334,27 +291,18 @@ export function useCreatePayment() {
 
   return useMutation({
     mutationFn: async (input: CreatePaymentInput & { isAdmin?: boolean }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Utilisateur non authentifié')
-
       const { isAdmin, ...paymentData } = input
 
-      // Si l'admin déclare le paiement, il est validé directement
-      const insertData = isAdmin
-        ? {
-            ...paymentData,
-            declared_by: user.id,
-            status: 'validated' as const,
-            validated_by: user.id,
-            validated_at: new Date().toISOString(),
-          }
-        : { ...paymentData, declared_by: user.id }
-
       const { data, error } = await supabase
-        .from('payments')
-        .insert([insertData as never])
-        .select()
-        .single()
+        .rpc('create_payment' as never, {
+          p_case_id: paymentData.case_id,
+          p_amount: paymentData.amount,
+          p_payment_date: paymentData.payment_date,
+          p_payment_method: paymentData.payment_method || null,
+          p_transaction_reference: paymentData.transaction_reference || null,
+          p_receipt_path: paymentData.receipt_path || null,
+          p_is_admin: isAdmin || false,
+        } as never)
 
       if (error) throw error
       return data as Payment
@@ -376,28 +324,12 @@ export function useValidatePayment() {
 
   return useMutation({
     mutationFn: async (input: { payment_id: string; case_id: string; approved: boolean; rejection_reason?: string }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Utilisateur non authentifié')
-
-      const updateData = input.approved
-        ? {
-            status: 'validated' as const,
-            validated_by: user.id,
-            validated_at: new Date().toISOString(),
-          }
-        : {
-            status: 'rejected' as const,
-            validated_by: user.id,
-            validated_at: new Date().toISOString(),
-            rejection_reason: input.rejection_reason || null,
-          }
-
       const { data, error } = await supabase
-        .from('payments')
-        .update(updateData as never)
-        .eq('id', input.payment_id)
-        .select()
-        .single()
+        .rpc('validate_payment' as never, {
+          p_payment_id: input.payment_id,
+          p_approved: input.approved,
+          p_rejection_reason: input.rejection_reason || null,
+        } as never)
 
       if (error) throw error
       return data as Payment

@@ -7,12 +7,10 @@ export function useDebtorsPP() {
     queryKey: ['debtors-pp'],
     queryFn: async (): Promise<DebtorPP[]> => {
       const { data, error } = await supabase
-        .from('debtors_pp')
-        .select('*')
-        .order('last_name', { ascending: true })
+        .rpc('list_debtors_pp' as never)
 
       if (error) throw error
-      return data as DebtorPP[]
+      return (data ?? []) as DebtorPP[]
     },
   })
 }
@@ -22,12 +20,10 @@ export function useDebtorsPM() {
     queryKey: ['debtors-pm'],
     queryFn: async (): Promise<DebtorPM[]> => {
       const { data, error } = await supabase
-        .from('debtors_pm')
-        .select('*')
-        .order('company_name', { ascending: true })
+        .rpc('list_debtors_pm' as never)
 
       if (error) throw error
-      return data as DebtorPM[]
+      return (data ?? []) as DebtorPM[]
     },
   })
 }
@@ -37,27 +33,11 @@ export function useDebtorsPPByBank(bankId: string) {
   return useQuery({
     queryKey: ['debtors-pp', 'bank', bankId],
     queryFn: async (): Promise<DebtorPP[]> => {
-      // Récupérer les debtor_pp_id distincts depuis les cases de cette banque
-      const { data: cases, error: casesError } = await supabase
-        .from('cases')
-        .select('debtor_pp_id')
-        .eq('bank_id', bankId)
-        .not('debtor_pp_id', 'is', null)
-
-      if (casesError) throw casesError
-      if (!cases || cases.length === 0) return []
-
-      const typedCases = cases as unknown as { debtor_pp_id: string }[]
-      const debtorIds = [...new Set(typedCases.map((c) => c.debtor_pp_id))]
-
       const { data, error } = await supabase
-        .from('debtors_pp')
-        .select('*')
-        .in('id', debtorIds)
-        .order('last_name', { ascending: true })
+        .rpc('list_debtors_pp_by_bank' as never, { p_bank_id: bankId } as never)
 
       if (error) throw error
-      return data as DebtorPP[]
+      return (data ?? []) as DebtorPP[]
     },
     enabled: !!bankId,
   })
@@ -68,26 +48,11 @@ export function useDebtorsPMByBank(bankId: string) {
   return useQuery({
     queryKey: ['debtors-pm', 'bank', bankId],
     queryFn: async (): Promise<DebtorPM[]> => {
-      const { data: cases, error: casesError } = await supabase
-        .from('cases')
-        .select('debtor_pm_id')
-        .eq('bank_id', bankId)
-        .not('debtor_pm_id', 'is', null)
-
-      if (casesError) throw casesError
-      if (!cases || cases.length === 0) return []
-
-      const typedCases = cases as unknown as { debtor_pm_id: string }[]
-      const debtorIds = [...new Set(typedCases.map((c) => c.debtor_pm_id))]
-
       const { data, error } = await supabase
-        .from('debtors_pm')
-        .select('*')
-        .in('id', debtorIds)
-        .order('company_name', { ascending: true })
+        .rpc('list_debtors_pm_by_bank' as never, { p_bank_id: bankId } as never)
 
       if (error) throw error
-      return data as DebtorPM[]
+      return (data ?? []) as DebtorPM[]
     },
     enabled: !!bankId,
   })
@@ -99,28 +64,10 @@ export function useDebtorCountsByBank() {
     queryKey: ['debtor-counts-by-bank'],
     queryFn: async (): Promise<Record<string, { pp: number; pm: number }>> => {
       const { data, error } = await supabase
-        .from('cases')
-        .select('bank_id, debtor_pp_id, debtor_pm_id')
+        .rpc('get_debtor_counts_by_bank' as never)
 
       if (error) throw error
-      if (!data) return {}
-
-      const typedData = data as unknown as { bank_id: string; debtor_pp_id: string | null; debtor_pm_id: string | null }[]
-      const counts: Record<string, { pp: Set<string>; pm: Set<string> }> = {}
-
-      for (const c of typedData) {
-        if (!counts[c.bank_id]) {
-          counts[c.bank_id] = { pp: new Set(), pm: new Set() }
-        }
-        if (c.debtor_pp_id) counts[c.bank_id].pp.add(c.debtor_pp_id)
-        if (c.debtor_pm_id) counts[c.bank_id].pm.add(c.debtor_pm_id)
-      }
-
-      const result: Record<string, { pp: number; pm: number }> = {}
-      for (const [bankId, sets] of Object.entries(counts)) {
-        result[bankId] = { pp: sets.pp.size, pm: sets.pm.size }
-      }
-      return result
+      return (data ?? {}) as Record<string, { pp: number; pm: number }>
     },
   })
 }
@@ -134,10 +81,7 @@ export function useCreateDebtorPP() {
   return useMutation({
     mutationFn: async (debtor: CreateDebtorPPInput): Promise<DebtorPP> => {
       const { data, error } = await supabase
-        .from('debtors_pp')
-        .insert([debtor as never])
-        .select()
-        .single()
+        .rpc('create_debtor_pp' as never, { p_data: debtor } as never)
 
       if (error) throw error
       return data as DebtorPP
@@ -158,10 +102,7 @@ export function useCreateDebtorPM() {
   return useMutation({
     mutationFn: async (debtor: CreateDebtorPMInput): Promise<DebtorPM> => {
       const { data, error } = await supabase
-        .from('debtors_pm')
-        .insert([debtor as never])
-        .select()
-        .single()
+        .rpc('create_debtor_pm' as never, { p_data: debtor } as never)
 
       if (error) throw error
       return data as DebtorPM

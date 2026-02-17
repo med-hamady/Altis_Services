@@ -10,12 +10,10 @@ export function useBanks() {
     queryKey: ['banks'],
     queryFn: async (): Promise<Bank[]> => {
       const { data, error } = await supabase
-        .from('banks')
-        .select('*')
-        .order('name')
+        .rpc('list_banks' as never)
 
       if (error) throw error
-      return data as Bank[]
+      return (data ?? []) as Bank[]
     },
   })
 }
@@ -28,10 +26,7 @@ export function useBank(id: string | null) {
       if (!id) return null
 
       const { data, error } = await supabase
-        .from('banks')
-        .select('*')
-        .eq('id', id)
-        .single()
+        .rpc('get_bank' as never, { p_bank_id: id } as never)
 
       if (error) throw error
       return data as Bank
@@ -47,10 +42,7 @@ export function useCreateBank() {
   return useMutation({
     mutationFn: async (bank: BankInput) => {
       const { data, error } = await supabase
-        .from('banks')
-        .insert([bank as never])
-        .select()
-        .single()
+        .rpc('create_bank' as never, { p_data: bank } as never)
 
       if (error) throw error
       return data as Bank
@@ -68,11 +60,10 @@ export function useUpdateBank() {
   return useMutation({
     mutationFn: async ({ id, bank }: { id: string; bank: Partial<BankInput> }) => {
       const { data, error } = await supabase
-        .from('banks')
-        .update(bank as never)
-        .eq('id', id)
-        .select()
-        .single()
+        .rpc('update_bank' as never, {
+          p_bank_id: id,
+          p_data: bank,
+        } as never)
 
       if (error) throw error
       return data as Bank
@@ -91,9 +82,7 @@ export function useDeleteBank() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('banks')
-        .delete()
-        .eq('id', id)
+        .rpc('delete_bank' as never, { p_bank_id: id } as never)
 
       if (error) throw error
     },
@@ -110,11 +99,10 @@ export function useUpdateBankProfile() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Pick<Bank, 'name' | 'address' | 'city' | 'phone' | 'email' | 'logo_url'>> }) => {
       const { data: result, error } = await supabase
-        .from('banks')
-        .update(data as never)
-        .eq('id', id)
-        .select()
-        .single()
+        .rpc('update_bank_profile' as never, {
+          p_bank_id: id,
+          p_data: data,
+        } as never)
 
       if (error) throw error
       return result as Bank
@@ -133,11 +121,10 @@ export function useUpdateBankUserProfile() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Pick<BankUser, 'full_name' | 'phone' | 'job_title' | 'avatar_url'>> }) => {
       const { data: result, error } = await supabase
-        .from('bank_users')
-        .update(data as never)
-        .eq('id', id)
-        .select()
-        .single()
+        .rpc('update_bank_user_profile' as never, {
+          p_user_id: id,
+          p_data: data,
+        } as never)
 
       if (error) throw error
       return result as BankUser
@@ -155,11 +142,10 @@ export function useToggleBankStatus() {
   return useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       const { data, error } = await supabase
-        .from('banks')
-        .update({ is_active: isActive } as never)
-        .eq('id', id)
-        .select()
-        .single()
+        .rpc('toggle_bank_status' as never, {
+          p_bank_id: id,
+          p_is_active: isActive,
+        } as never)
 
       if (error) throw error
       return data as Bank

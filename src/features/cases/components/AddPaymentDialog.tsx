@@ -166,11 +166,10 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance,
       // Notification email aux admins (fire-and-forget, ne bloque pas le flux)
       if (!isAdmin) {
         supabase
-          .from('admins')
-          .select('email')
-          .eq('is_active', true)
-          .then(({ data: admins }) => {
-            const emails = admins?.map(a => a.email).filter(Boolean) as string[] | undefined
+          .rpc('get_admin_emails' as never)
+          .then(({ data: admins }: { data: unknown }) => {
+            const adminList = admins as { email: string }[] | null
+            const emails = adminList?.map(a => a.email).filter(Boolean) as string[] | undefined
             if (emails && emails.length > 0) {
               sendEmail({
                 to: emails,

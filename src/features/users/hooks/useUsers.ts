@@ -11,12 +11,10 @@ export function useAdmins() {
     queryKey: ['admins'],
     queryFn: async (): Promise<Admin[]> => {
       const { data, error } = await supabase
-        .from('admins')
-        .select('*')
-        .order('full_name')
+        .rpc('list_admins' as never)
 
       if (error) throw error
-      return data as Admin[]
+      return (data ?? []) as Admin[]
     },
   })
 }
@@ -35,18 +33,15 @@ export function useCreateAdmin() {
       if (authError) throw authError
       if (!authData.user) throw new Error('Utilisateur non créé')
 
-      // 2. Créer le profil dans admins
+      // 2. Créer le profil dans admins via RPC
       const { data, error } = await supabase
-        .from('admins')
-        .insert([{
-          id: authData.user.id,
-          email: admin.email,
-          username: admin.username || null,
-          full_name: admin.full_name,
-          phone: admin.phone || null,
-        } as never])
-        .select()
-        .single()
+        .rpc('create_admin' as never, {
+          p_id: authData.user.id,
+          p_email: admin.email,
+          p_full_name: admin.full_name,
+          p_phone: admin.phone || null,
+          p_username: admin.username || null,
+        } as never)
 
       if (error) throw error
       return data as Admin
@@ -72,11 +67,12 @@ export function useUpdateAdmin() {
       }
 
       const { data, error } = await supabase
-        .from('admins')
-        .update(admin as never)
-        .eq('id', id)
-        .select()
-        .single()
+        .rpc('update_admin' as never, {
+          p_id: id,
+          p_full_name: admin.full_name || null,
+          p_phone: admin.phone !== undefined ? admin.phone : null,
+          p_is_active: admin.is_active !== undefined ? admin.is_active : null,
+        } as never)
 
       if (error) throw error
       return data as Admin
@@ -112,12 +108,10 @@ export function useAgents() {
     queryKey: ['agents'],
     queryFn: async (): Promise<Agent[]> => {
       const { data, error } = await supabase
-        .from('agents')
-        .select('*')
-        .order('full_name')
+        .rpc('list_agents' as never)
 
       if (error) throw error
-      return data as Agent[]
+      return (data ?? []) as Agent[]
     },
   })
 }
@@ -136,18 +130,15 @@ export function useCreateAgent() {
       if (authError) throw authError
       if (!authData.user) throw new Error('Utilisateur non créé')
 
-      // 2. Créer le profil agent
+      // 2. Créer le profil agent via RPC
       const { data, error } = await supabase
-        .from('agents')
-        .insert([{
-          id: authData.user.id,
-          email: agent.email,
-          username: agent.username || null,
-          full_name: agent.full_name,
-          phone: agent.phone || null,
-        } as never])
-        .select()
-        .single()
+        .rpc('create_agent' as never, {
+          p_id: authData.user.id,
+          p_email: agent.email,
+          p_full_name: agent.full_name,
+          p_phone: agent.phone || null,
+          p_username: agent.username || null,
+        } as never)
 
       if (error) throw error
       return data as Agent
@@ -173,11 +164,13 @@ export function useUpdateAgent() {
       }
 
       const { data, error } = await supabase
-        .from('agents')
-        .update(agent as never)
-        .eq('id', id)
-        .select()
-        .single()
+        .rpc('update_agent' as never, {
+          p_id: id,
+          p_full_name: agent.full_name || null,
+          p_phone: agent.phone !== undefined ? agent.phone : null,
+          p_sector: agent.sector !== undefined ? agent.sector : null,
+          p_is_active: agent.is_active !== undefined ? agent.is_active : null,
+        } as never)
 
       if (error) throw error
       return data as Agent
@@ -213,12 +206,10 @@ export function useBankUsers() {
     queryKey: ['bank_users'],
     queryFn: async (): Promise<BankUser[]> => {
       const { data, error } = await supabase
-        .from('bank_users')
-        .select('*, bank:banks(*)')
-        .order('full_name')
+        .rpc('list_bank_users' as never)
 
       if (error) throw error
-      return data as BankUser[]
+      return (data ?? []) as BankUser[]
     },
   })
 }
@@ -237,20 +228,17 @@ export function useCreateBankUser() {
       if (authError) throw authError
       if (!authData.user) throw new Error('Utilisateur non créé')
 
-      // 2. Créer le profil bank_user
+      // 2. Créer le profil bank_user via RPC
       const { data, error } = await supabase
-        .from('bank_users')
-        .insert([{
-          id: authData.user.id,
-          email: user.email,
-          username: user.username || null,
-          full_name: user.full_name,
-          phone: user.phone || null,
-          bank_id: user.bank_id,
-          job_title: user.job_title || null,
-        } as never])
-        .select('*, bank:banks(*)')
-        .single()
+        .rpc('create_bank_user' as never, {
+          p_id: authData.user.id,
+          p_email: user.email,
+          p_full_name: user.full_name,
+          p_bank_id: user.bank_id,
+          p_phone: user.phone || null,
+          p_job_title: user.job_title || null,
+          p_username: user.username || null,
+        } as never)
 
       if (error) throw error
       return data as BankUser
@@ -276,11 +264,13 @@ export function useUpdateBankUser() {
       }
 
       const { data, error } = await supabase
-        .from('bank_users')
-        .update(user as never)
-        .eq('id', id)
-        .select('*, bank:banks(*)')
-        .single()
+        .rpc('update_bank_user' as never, {
+          p_id: id,
+          p_full_name: user.full_name || null,
+          p_phone: user.phone !== undefined ? user.phone : null,
+          p_job_title: user.job_title !== undefined ? user.job_title : null,
+          p_is_active: user.is_active !== undefined ? user.is_active : null,
+        } as never)
 
       if (error) throw error
       return data as BankUser

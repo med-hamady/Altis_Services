@@ -10,19 +10,10 @@ export function useCasesByBank(bankId: string | null) {
       if (!bankId) return []
 
       const { data, error } = await supabase
-        .from('cases')
-        .select(`
-          *,
-          bank:banks(*),
-          debtor_pp:debtors_pp(*),
-          debtor_pm:debtors_pm(*),
-          assigned_agent:agents(*)
-        `)
-        .eq('bank_id', bankId)
-        .order('created_at', { ascending: false })
+        .rpc('get_bank_report_cases' as never, { p_bank_id: bankId } as never)
 
       if (error) throw error
-      return (data || []) as Case[]
+      return (data ?? []) as Case[]
     },
     enabled: !!bankId,
   })
@@ -35,49 +26,21 @@ export function useBankStats(bankId: string | null) {
     queryFn: async () => {
       if (!bankId) return null
 
-      const { data: cases, error } = await supabase
-        .from('cases')
-        .select('status, amount_principal, amount_interest, amount_penalties, amount_fees, total_paid, remaining_balance')
-        .eq('bank_id', bankId)
+      const { data, error } = await supabase
+        .rpc('get_bank_report_stats' as never, { p_bank_id: bankId } as never)
 
       if (error) throw error
-      if (!cases) return null
-
-      const typedCases = cases as unknown as { status: string; amount_principal: number; amount_interest: number; amount_penalties: number; amount_fees: number; total_paid: number; remaining_balance: number }[]
-
-      const stats = {
-        totalCases: typedCases.length,
-        byStatus: {} as Record<string, number>,
-        totalAmount: 0,
-        totalPrincipal: 0,
-        totalInterest: 0,
-        totalPenalties: 0,
-        totalFees: 0,
-        totalPaid: 0,
-        totalRemainingBalance: 0,
+      return data as {
+        totalCases: number
+        byStatus: Record<string, number>
+        totalAmount: number
+        totalPrincipal: number
+        totalInterest: number
+        totalPenalties: number
+        totalFees: number
+        totalPaid: number
+        totalRemainingBalance: number
       }
-
-      typedCases.forEach((c) => {
-        // Par statut
-        stats.byStatus[c.status] = (stats.byStatus[c.status] || 0) + 1
-
-        // Montants (Math.abs pour gérer les montants négatifs importés)
-        const principal = Math.abs(c.amount_principal || 0)
-        const interest = Math.abs(c.amount_interest || 0)
-        const penalties = Math.abs(c.amount_penalties || 0)
-        const fees = Math.abs(c.amount_fees || 0)
-        const total = principal + interest + penalties + fees
-
-        stats.totalPrincipal += principal
-        stats.totalInterest += interest
-        stats.totalPenalties += penalties
-        stats.totalFees += fees
-        stats.totalAmount += total
-        stats.totalPaid += (c.total_paid || 0)
-        stats.totalRemainingBalance += (c.remaining_balance ?? total)
-      })
-
-      return stats
     },
     enabled: !!bankId,
   })

@@ -9,33 +9,19 @@ export function useCases() {
   return useQuery({
     queryKey: ['cases', userType, currentUser?.id],
     queryFn: async (): Promise<Case[]> => {
-      let query = supabase
-        .from('cases')
-        .select(`
-          *,
-          bank:banks(*),
-          debtor_pp:debtors_pp(*),
-          debtor_pm:debtors_pm(*),
-          assigned_agent:agents(*)
-        `)
+      const bankId = userType === 'bank_user' && currentUser && 'bank_id' in currentUser
+        ? currentUser.bank_id
+        : null
 
-      // Agent : uniquement ses dossiers affectés
-      if (userType === 'agent' && currentUser?.id) {
-        query = query.eq('assigned_agent_id', currentUser.id)
-      }
-
-      // Bank user : uniquement les dossiers de sa banque
-      if (userType === 'bank_user' && currentUser && 'bank_id' in currentUser) {
-        query = query.eq('bank_id', currentUser.bank_id)
-      }
-
-      // Exclure les dossiers clôturés (déplacés vers l'archive)
-      query = query.neq('status', 'closed')
-
-      const { data, error } = await query.order('created_at', { ascending: false })
+      const { data, error } = await supabase
+        .rpc('list_cases' as never, {
+          p_user_id: currentUser?.id || null,
+          p_role: userType || 'admin',
+          p_bank_id: bankId,
+        } as never)
 
       if (error) throw error
-      return data as Case[]
+      return (data ?? []) as Case[]
     },
     enabled: !!currentUser,
   })
@@ -48,26 +34,19 @@ export function useArchivedCases() {
   return useQuery({
     queryKey: ['cases', 'archived', userType, currentUser?.id],
     queryFn: async (): Promise<Case[]> => {
-      let query = supabase
-        .from('cases')
-        .select(`
-          *,
-          bank:banks(*),
-          debtor_pp:debtors_pp(*),
-          debtor_pm:debtors_pm(*),
-          assigned_agent:agents(*)
-        `)
-        .eq('status', 'closed')
+      const bankId = userType === 'bank_user' && currentUser && 'bank_id' in currentUser
+        ? currentUser.bank_id
+        : null
 
-      // Bank user : uniquement les dossiers de sa banque
-      if (userType === 'bank_user' && currentUser && 'bank_id' in currentUser) {
-        query = query.eq('bank_id', currentUser.bank_id)
-      }
-
-      const { data, error } = await query.order('closed_at', { ascending: false })
+      const { data, error } = await supabase
+        .rpc('list_archived_cases' as never, {
+          p_user_id: currentUser?.id || null,
+          p_role: userType || 'admin',
+          p_bank_id: bankId,
+        } as never)
 
       if (error) throw error
-      return data as Case[]
+      return (data ?? []) as Case[]
     },
     enabled: !!currentUser,
   })
@@ -80,15 +59,9 @@ export function useCreateCase() {
   return useMutation({
     mutationFn: async (caseData: CreateCaseDTO): Promise<Case> => {
       const { data, error } = await supabase
-        .from('cases')
-        .insert([caseData as never])
-        .select(`
-          *,
-          bank:banks(*),
-          debtor_pp:debtors_pp(*),
-          debtor_pm:debtors_pm(*)
-        `)
-        .single()
+        .rpc('create_case' as never, {
+          p_data: caseData,
+        } as never)
 
       if (error) throw error
       return data as Case
