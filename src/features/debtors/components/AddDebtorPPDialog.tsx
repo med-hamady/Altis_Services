@@ -83,6 +83,7 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
         employer: data.employer || null,
         occupation: data.occupation || null,
         notes: data.notes || null,
+        photo_url: null,
       })
       toast.success('Débiteur créé avec succès')
       onCreated?.(result)

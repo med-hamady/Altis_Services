@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { Camera, Landmark, Save, User } from 'lucide-react'
+import { Camera, Landmark, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

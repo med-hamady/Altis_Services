@@ -126,7 +126,6 @@ export interface UpcomingPromise {
   id: string
   amount: number
   due_date: string
-  payment_method: string | null
   status: string
   case_id: string
   case_reference: string

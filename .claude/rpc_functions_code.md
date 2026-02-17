@@ -571,7 +571,7 @@ Dossiers actifs (status != 'closed'), filtres par role. Retourne avec bank, debt
 - **Securite** : SECURITY DEFINER
 - **Tables** : cases + joins
 
-Dossiers clos (status = 'closed'), filtres par role.
+Dossiers clos (status = 'closed'), filtres par role. Sans colonnes supprimées par migration 042 (bank_reference, product_type, contract_reference, guarantee_type, guarantee_description, last_bank_payment_date, last_bank_payment_amount, risk_level, internal_notes).
 
 ---
 

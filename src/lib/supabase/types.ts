@@ -261,7 +261,6 @@ export interface Database {
           case_id: string
           amount: number
           due_date: string
-          payment_method: string | null
           status: 'pending' | 'kept' | 'broken' | 'rescheduled'
           status_notes: string | null
           status_updated_at: string | null
@@ -274,7 +273,6 @@ export interface Database {
           case_id: string
           amount: number
           due_date: string
-          payment_method?: string | null
           status?: 'pending' | 'kept' | 'broken' | 'rescheduled'
           status_notes?: string | null
           status_updated_at?: string | null
@@ -287,7 +285,6 @@ export interface Database {
           case_id?: string
           amount?: number
           due_date?: string
-          payment_method?: string | null
           status?: 'pending' | 'kept' | 'broken' | 'rescheduled'
           status_notes?: string | null
           status_updated_at?: string | null
