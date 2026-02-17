@@ -20,10 +20,12 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 // Client isolé pour créer des utilisateurs sans affecter la session admin
 // persistSession: false empêche le signUp de remplacer la session courante
+// storageKey distinct pour éviter le warning "Multiple GoTrueClient instances"
 export const supabaseAuth = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
+    storageKey: 'sb-auth-secondary',
   },
 })
 

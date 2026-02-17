@@ -76,13 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserType(profile.userType)
           } else {
             // Profil non trouvé, déconnecter
-            await supabase.auth.signOut()
+            await supabase.auth.signOut({ scope: 'local' })
             setUser(null)
             setSession(null)
           }
         } catch (error) {
           console.error('Erreur profil initial:', error)
-          await supabase.auth.signOut()
+          await supabase.auth.signOut({ scope: 'local' })
           setUser(null)
           setSession(null)
         }
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profile = await fetchUserProfile(data.user.id)
 
       if (!profile) {
-        await supabase.auth.signOut()
+        await supabase.auth.signOut({ scope: 'local' })
         return { error: new Error('Profil utilisateur introuvable. Contactez l\'administrateur.') }
       }
 
@@ -148,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Déconnexion
   const signOut = async () => {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
     setUser(null)
     setCurrentUser(null)
     setUserType(null)
