@@ -56,7 +56,7 @@ export interface Database {
           role: 'admin' | 'agent' | 'bank_user'
           bank_id: string | null
           phone: string | null
-          sector: string | null
+
           is_active: boolean
           created_at: string
           updated_at: string
@@ -68,7 +68,7 @@ export interface Database {
           role?: 'admin' | 'agent' | 'bank_user'
           bank_id?: string | null
           phone?: string | null
-          sector?: string | null
+
           is_active?: boolean
           created_at?: string
           updated_at?: string
@@ -80,7 +80,7 @@ export interface Database {
           role?: 'admin' | 'agent' | 'bank_user'
           bank_id?: string | null
           phone?: string | null
-          sector?: string | null
+
           is_active?: boolean
           created_at?: string
           updated_at?: string
@@ -156,8 +156,6 @@ export interface Database {
           debt_penalties: number
           debt_fees: number
           debt_total: number
-          product_type: string | null
-          contract_reference: string | null
           default_date: string | null
           closure_reason: string | null
           closure_notes: string | null
@@ -180,8 +178,6 @@ export interface Database {
           debt_principal?: number
           debt_penalties?: number
           debt_fees?: number
-          product_type?: string | null
-          contract_reference?: string | null
           default_date?: string | null
           closure_reason?: string | null
           closure_notes?: string | null
@@ -204,8 +200,6 @@ export interface Database {
           debt_principal?: number
           debt_penalties?: number
           debt_fees?: number
-          product_type?: string | null
-          contract_reference?: string | null
           default_date?: string | null
           closure_reason?: string | null
           closure_notes?: string | null

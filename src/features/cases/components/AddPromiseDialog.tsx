@@ -25,7 +25,6 @@ import { useCreatePromise } from '../hooks/useCaseDetail'
 interface PromiseFormData {
   amount: string
   due_date: string
-  reference: string
   notes: string
 }
 
@@ -45,7 +44,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
     defaultValues: {
       amount: '',
       due_date: '',
-      reference: '',
       notes: '',
     },
   })
@@ -58,7 +56,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
       form.reset({
         amount: '',
         due_date: tomorrow.toISOString().slice(0, 10),
-        reference: '',
         notes: '',
       })
       setServerError(null)
@@ -72,7 +69,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
         case_id: caseId,
         amount: parseFloat(data.amount),
         due_date: data.due_date,
-        reference: data.reference || undefined,
         notes: data.notes || undefined,
       })
       toast.success('Promesse de paiement enregistrée')
@@ -155,20 +151,6 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="reference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Référence</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Référence optionnelle..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}

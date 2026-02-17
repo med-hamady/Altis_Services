@@ -47,9 +47,7 @@ export function BankProfilePage() {
   const updateUserProfile = useUpdateBankUserProfile()
 
   const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
-  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const bankForm = useForm<BankProfileFormData>({
     values: {
@@ -110,23 +108,6 @@ export function BankProfilePage() {
     } finally {
       setUploadingLogo(false)
       if (logoInputRef.current) logoInputRef.current.value = ''
-    }
-  }
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadingAvatar(true)
-    try {
-      const url = await uploadImage(file, `users/${bankUser.id}/avatar`)
-      if (url) {
-        await updateUserProfile.mutateAsync({ id: bankUser.id, data: { avatar_url: url } })
-        toast.success('Photo de profil mise à jour')
-      }
-    } finally {
-      setUploadingAvatar(false)
-      if (avatarInputRef.current) avatarInputRef.current.value = ''
     }
   }
 
@@ -298,38 +279,11 @@ export function BankProfilePage() {
       {/* Profil Personnel */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div
-              className="relative flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border-2 border-dashed bg-muted transition-colors hover:border-primary"
-              onClick={() => avatarInputRef.current?.click()}
-            >
-              {bankUser.avatar_url ? (
-                <img
-                  src={bankUser.avatar_url}
-                  alt="Avatar"
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
-                <User className="h-8 w-8 text-muted-foreground" />
-              )}
-              <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Camera className="h-3 w-3" />
-              </div>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handleAvatarUpload}
-                disabled={uploadingAvatar}
-              />
-            </div>
-            <div>
-              <CardTitle>Profil personnel</CardTitle>
-              <CardDescription>
-                {bankUser.email} — Cliquez sur l'image pour changer votre photo
-              </CardDescription>
-            </div>
+          <div>
+            <CardTitle>Profil personnel</CardTitle>
+            <CardDescription>
+              {bankUser.email}
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>

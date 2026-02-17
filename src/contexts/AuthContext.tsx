@@ -219,7 +219,6 @@ export function usePermissions() {
 
     // Informations spécifiques
     bankId: userType === 'bank_user' ? (currentUser as BankUser & { userType: 'bank_user' }).bank_id : null,
-    agentSector: userType === 'agent' ? (currentUser as Agent & { userType: 'agent' }).sector : null,
 
     // Permissions spécifiques
     canManageBanks: userType === 'admin',

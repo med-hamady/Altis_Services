@@ -31,7 +31,6 @@ interface AddDebtorPPDialogProps {
 type DebtorPPFormData = {
   first_name: string
   last_name: string
-  date_of_birth: string
   id_type: string
   id_number: string
   phone_primary: string
@@ -42,16 +41,12 @@ type DebtorPPFormData = {
   address_region: string
   employer: string
   occupation: string
-  alt_contact_name: string
-  alt_contact_relation: string
-  alt_contact_phone: string
   notes: string
 }
 
 const defaultValues: DebtorPPFormData = {
   first_name: '',
   last_name: '',
-  date_of_birth: '',
   id_type: '',
   id_number: '',
   phone_primary: '',
@@ -62,9 +57,6 @@ const defaultValues: DebtorPPFormData = {
   address_region: '',
   employer: '',
   occupation: '',
-  alt_contact_name: '',
-  alt_contact_relation: '',
-  alt_contact_phone: '',
   notes: '',
 }
 
@@ -80,7 +72,6 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
       const result = await createDebtorPP.mutateAsync({
         first_name: data.first_name,
         last_name: data.last_name,
-        date_of_birth: data.date_of_birth || null,
         id_type: data.id_type || null,
         id_number: data.id_number || null,
         phone_primary: data.phone_primary || null,
@@ -89,17 +80,9 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
         address_street: data.address_street || null,
         address_city: data.address_city || null,
         address_region: data.address_region || null,
-        address_work_street: null,
-        address_work_city: null,
-        address_work_region: null,
         employer: data.employer || null,
         occupation: data.occupation || null,
-        alt_contact_name: data.alt_contact_name || null,
-        alt_contact_relation: data.alt_contact_relation || null,
-        alt_contact_phone: data.alt_contact_phone || null,
         notes: data.notes || null,
-        photo_url: null,
-        created_by: null,
       })
       toast.success('Débiteur créé avec succès')
       onCreated?.(result)
@@ -157,20 +140,6 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="date_of_birth"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date de naissance</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
@@ -334,53 +303,6 @@ export function AddDebtorPPDialog({ open, onOpenChange, onCreated }: AddDebtorPP
                 )}
               />
             </div>
-
-            {/* Contact alternatif */}
-            <h4 className="text-sm font-semibold text-muted-foreground pt-2">Contact alternatif</h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="alt_contact_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom du contact</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nom complet" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="alt_contact_relation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Relation</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Frère, Ami..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="alt_contact_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Téléphone du contact</FormLabel>
-                  <FormControl>
-                    <Input placeholder="+222 XX XX XX XX" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Notes */}
             <h4 className="text-sm font-semibold text-muted-foreground pt-2">Informations complémentaires</h4>

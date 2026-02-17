@@ -45,37 +45,19 @@ type DebtorType = 'pp' | 'pm'
 type CaseFormData = {
   // Identification
   bank_id: string
-  bank_reference: string
   debtor_id: string
   // Classification
   phase: CasePhase
-  risk_level: string
   // Informations créance
-  product_type: string
-  contract_reference: string
   default_date: string
   // Montants (MRU)
   amount_principal: string
   amount_interest: string
   amount_penalties: string
   amount_fees: string
-  // Dernier paiement banque
-  last_bank_payment_date: string
-  last_bank_payment_amount: string
-  // Garantie
-  guarantee_type: string
-  guarantee_description: string
   // Notes
   notes: string
-  internal_notes: string
 }
-
-const RISK_LEVELS = [
-  { value: 'low', label: 'Faible' },
-  { value: 'medium', label: 'Moyen' },
-  { value: 'high', label: 'Élevé' },
-  { value: 'critical', label: 'Critique' },
-]
 
 export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialogProps) {
   const createCase = useCreateCase()
@@ -85,23 +67,14 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
 
   const defaultValues: CaseFormData = {
     bank_id: bankId || '',
-    bank_reference: '',
     debtor_id: '',
     phase: CasePhase.Amicable,
-    risk_level: '',
-    product_type: '',
-    contract_reference: '',
     default_date: '',
     amount_principal: '',
     amount_interest: '0',
     amount_penalties: '0',
     amount_fees: '0',
-    last_bank_payment_date: '',
-    last_bank_payment_amount: '',
-    guarantee_type: '',
-    guarantee_description: '',
     notes: '',
-    internal_notes: '',
   }
 
   const form = useForm<CaseFormData>({ defaultValues })
@@ -132,26 +105,15 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
     try {
       const caseData: CreateCaseDTO = {
         bank_id: bankId || data.bank_id,
-        bank_reference: data.bank_reference || undefined,
         debtor_pp_id: debtorType === 'pp' ? data.debtor_id : undefined,
         debtor_pm_id: debtorType === 'pm' ? data.debtor_id : undefined,
         phase: data.phase,
-        risk_level: data.risk_level || undefined,
-        product_type: data.product_type || undefined,
-        contract_reference: data.contract_reference || undefined,
         default_date: data.default_date || undefined,
         amount_principal: parseFloat(data.amount_principal) || 0,
         amount_interest: parseFloat(data.amount_interest) || 0,
         amount_penalties: parseFloat(data.amount_penalties) || 0,
         amount_fees: parseFloat(data.amount_fees) || 0,
-        last_bank_payment_date: data.last_bank_payment_date || undefined,
-        last_bank_payment_amount: data.last_bank_payment_amount
-          ? parseFloat(data.last_bank_payment_amount)
-          : undefined,
-        guarantee_type: data.guarantee_type || undefined,
-        guarantee_description: data.guarantee_description || undefined,
         notes: data.notes || undefined,
-        internal_notes: data.internal_notes || undefined,
       }
 
       await createCase.mutateAsync(caseData)
@@ -277,20 +239,6 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 )}
               />
 
-              {/* Référence banque */}
-              <FormField
-                control={form.control}
-                name="bank_reference"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Référence banque</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Référence interne de la banque" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <Separator />
@@ -300,36 +248,6 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Informations sur la créance
               </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="product_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type de produit bancaire</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Crédit immobilier, Découvert..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contract_reference"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>N° de contrat</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Référence du contrat bancaire" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               <FormField
                 control={form.control}
@@ -418,139 +336,32 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
 
             <Separator />
 
-            {/* ─── 4. DERNIER PAIEMENT CÔTÉ BANQUE ─── */}
+            {/* ─── 4. CLASSIFICATION ─── */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Dernier paiement connu (côté banque)
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="last_bank_payment_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date du dernier paiement</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="last_bank_payment_amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Montant du dernier paiement</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* ─── 5. CLASSIFICATION & RISQUE ─── */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Classification & Risque
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="phase"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phase de recouvrement</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.values(CasePhase).map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {CasePhaseLabels[p]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="risk_level"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Niveau de risque</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {RISK_LEVELS.map((r) => (
-                            <SelectItem key={r.value} value={r.value}>
-                              {r.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* ─── 6. GARANTIE ─── */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Garantie
+                Classification
               </h3>
 
               <FormField
                 control={form.control}
-                name="guarantee_type"
+                name="phase"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type de garantie</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Hypothèque, Caution solidaire, Nantissement..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="guarantee_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description de la garantie</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Détails : bien hypothéqué, montant de la caution, conditions..."
-                        rows={2}
-                        {...field}
-                      />
-                    </FormControl>
+                    <FormLabel>Phase de recouvrement</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.values(CasePhase).map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {CasePhaseLabels[p]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -559,7 +370,7 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
 
             <Separator />
 
-            {/* ─── 7. NOTES ─── */}
+            {/* ─── 5. NOTES ─── */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Notes
@@ -583,23 +394,6 @@ export function CreateCaseDialog({ open, onOpenChange, bankId }: CreateCaseDialo
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="internal_notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes internes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Notes internes (visibles uniquement par l'équipe Altis)..."
-                        rows={2}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <DialogFooter>

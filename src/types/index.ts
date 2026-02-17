@@ -40,8 +40,6 @@ export interface Agent {
   username: string | null
   full_name: string
   phone: string | null
-  sector: string | null
-  zone: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -55,7 +53,6 @@ export interface BankUser {
   phone: string | null
   bank_id: string
   job_title: string | null
-  avatar_url: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -105,7 +102,6 @@ export interface DebtorPP {
   id: string
   first_name: string
   last_name: string
-  date_of_birth: string | null
   id_type: string | null
   id_number: string | null
   phone_primary: string | null
@@ -114,19 +110,12 @@ export interface DebtorPP {
   address_street: string | null
   address_city: string | null
   address_region: string | null
-  address_work_street: string | null
-  address_work_city: string | null
-  address_work_region: string | null
   employer: string | null
   occupation: string | null
   photo_url: string | null
-  alt_contact_name: string | null
-  alt_contact_relation: string | null
-  alt_contact_phone: string | null
   notes: string | null
   created_at: string
   updated_at: string
-  created_by: string | null
 }
 
 export interface DebtorPM {
@@ -165,7 +154,6 @@ export type Debtor = (DebtorPP & { type: 'pp' }) | (DebtorPM & { type: 'pm' })
 export interface Case {
   id: string
   reference: string
-  bank_reference: string | null
   bank_id: string
   assigned_agent_id: string | null
 
@@ -176,8 +164,6 @@ export interface Case {
   status: CaseStatus
   phase: CasePhase
 
-  product_type: string | null
-  contract_reference: string | null
   default_date: string | null
 
   amount_principal: number
@@ -185,15 +171,7 @@ export interface Case {
   amount_penalties: number
   amount_fees: number
 
-  guarantee_type: string | null
-  guarantee_description: string | null
   has_guarantee: boolean
-
-  last_bank_payment_date: string | null
-  last_bank_payment_amount: number | null
-
-  risk_level: string | null
-  internal_notes: string | null
 
   closure_reason: ClosureReason | null
   closure_notes: string | null
@@ -491,30 +469,20 @@ export interface ImportRow {
 
 export interface CreateCaseDTO {
   bank_id: string
-  bank_reference?: string
   debtor_pp_id?: string
   debtor_pm_id?: string
   phase?: CasePhase
-  product_type?: string
-  contract_reference?: string
   default_date?: string
   amount_principal: number
   amount_interest: number
   amount_penalties: number
   amount_fees: number
-  guarantee_type?: string
-  guarantee_description?: string
-  last_bank_payment_date?: string
-  last_bank_payment_amount?: number
-  risk_level?: string
-  internal_notes?: string
   notes?: string
 }
 
 export interface CreateDebtorPPDTO {
   first_name: string
   last_name: string
-  date_of_birth?: string
   id_type?: string
   id_number?: string
   phone_primary?: string
@@ -523,14 +491,8 @@ export interface CreateDebtorPPDTO {
   address_street?: string
   address_city?: string
   address_region?: string
-  address_work_street?: string
-  address_work_city?: string
-  address_work_region?: string
   employer?: string
   occupation?: string
-  alt_contact_name?: string
-  alt_contact_relation?: string
-  alt_contact_phone?: string
   notes?: string
 }
 

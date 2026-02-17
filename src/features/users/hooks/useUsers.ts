@@ -153,7 +153,7 @@ export function useUpdateAgent() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, agent, password }: { id: string; agent: Partial<Pick<Agent, 'full_name' | 'phone' | 'sector' | 'is_active'>>; password?: string }) => {
+    mutationFn: async ({ id, agent, password }: { id: string; agent: Partial<Pick<Agent, 'full_name' | 'phone' | 'is_active'>>; password?: string }) => {
       // Mettre à jour le mot de passe si fourni
       if (password) {
         const { error: pwError } = await supabase.rpc('change_user_password' as never, {
@@ -168,7 +168,6 @@ export function useUpdateAgent() {
           p_id: id,
           p_full_name: agent.full_name || null,
           p_phone: agent.phone !== undefined ? agent.phone : null,
-          p_sector: agent.sector !== undefined ? agent.sector : null,
           p_is_active: agent.is_active !== undefined ? agent.is_active : null,
         } as never)
 

@@ -85,7 +85,7 @@ export function AssignAgentDialog({ caseId, currentAgentId, open, onOpenChange }
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{agent.full_name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {[agent.sector, agent.zone].filter(Boolean).join(' — ') || agent.email}
+                      {agent.email}
                     </p>
                   </div>
                   {agent.id === currentAgentId && (

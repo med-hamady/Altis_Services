@@ -431,13 +431,9 @@ export function CaseDetailPage() {
           </CardHeader>
           <CardContent className="space-y-1">
             <InfoRow label="Banque" value={caseData.bank?.name} icon={Building2} />
-            <InfoRow label="Réf. banque" value={caseData.bank_reference} />
             <InfoRow label="Agent assigné" value={caseData.assigned_agent?.full_name} icon={UserCheck} />
             <InfoRow label="Date d'entrée en situation d'impayé" value={formatDate(caseData.default_date)} icon={Calendar} />
-            <InfoRow label="Produit" value={caseData.product_type} />
-            <InfoRow label="Réf. contrat" value={caseData.contract_reference} />
             <InfoRow label="Traitement" value={CasePhaseLabels[caseData.phase] || caseData.phase} />
-            <InfoRow label="Niveau de risque" value={caseData.risk_level} icon={AlertTriangle} />
 
             {/* Solde restant - résumé rapide */}
             <div className="pt-2 border-t">
@@ -519,12 +515,6 @@ export function CaseDetailPage() {
                 </div>
               )
             })()}
-            {isAdmin && caseData.internal_notes && (
-              <div className="pt-2 border-t">
-                <p className="text-xs text-muted-foreground">Notes internes (admin)</p>
-                <p className="text-sm whitespace-pre-wrap">{caseData.internal_notes}</p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -560,15 +550,6 @@ export function CaseDetailPage() {
                 <InfoRow label="Adresse" value={caseData.debtor_pp.address_street} icon={MapPin} />
                 <InfoRow label="Employeur" value={caseData.debtor_pp.employer} icon={Building2} />
                 <InfoRow label="Emploi" value={caseData.debtor_pp.occupation} icon={Briefcase} />
-
-                {caseData.debtor_pp.alt_contact_name && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Contact alternatif</p>
-                    <InfoRow label="Nom" value={caseData.debtor_pp.alt_contact_name} icon={User} />
-                    <InfoRow label="Relation" value={caseData.debtor_pp.alt_contact_relation} />
-                    <InfoRow label="Tél." value={caseData.debtor_pp.alt_contact_phone} icon={Phone} />
-                  </div>
-                )}
               </>
             ) : caseData.debtor_pm ? (
               <>
@@ -647,29 +628,6 @@ export function CaseDetailPage() {
               )}
             </div>
 
-            {/* Garantie */}
-            {caseData.guarantee_type && (
-              <div className="mt-4 pt-3 border-t">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Garantie</p>
-                <p className="text-sm">{caseData.guarantee_type}</p>
-                {caseData.guarantee_description && (
-                  <p className="text-sm text-muted-foreground">{caseData.guarantee_description}</p>
-                )}
-              </div>
-            )}
-
-            {/* Dernier paiement banque */}
-            {caseData.last_bank_payment_date && (
-              <div className="mt-4 pt-3 border-t">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Dernier paiement (banque)</p>
-                <p className="text-sm">
-                  {formatDate(caseData.last_bank_payment_date)}
-                  {caseData.last_bank_payment_amount != null && (
-                    <> — {formatAmount(caseData.last_bank_payment_amount)}</>
-                  )}
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -863,10 +821,8 @@ export function CaseDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Réf.</TableHead>
                       <TableHead>Montant</TableHead>
                       <TableHead>Échéance</TableHead>
-                      <TableHead>Mode</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Notes</TableHead>
                       {isAdmin && <TableHead className="w-[50px]"></TableHead>}
@@ -879,9 +835,6 @@ export function CaseDetailPage() {
                         new Date(promise.due_date) < new Date(new Date().toDateString())
                       return (
                         <TableRow key={promise.id} className={isOverdue ? 'bg-destructive/5' : ''}>
-                          <TableCell className="font-mono text-sm">
-                            {promise.reference || '—'}
-                          </TableCell>
                           <TableCell className="font-medium">
                             {formatAmount(promise.amount)}
                           </TableCell>
@@ -894,9 +847,6 @@ export function CaseDetailPage() {
                                 </span>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {promise.payment_method || '—'}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1">

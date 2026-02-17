@@ -52,8 +52,6 @@
 | email | varchar(255) | NO | - |
 | full_name | varchar(255) | NO | - |
 | phone | varchar(50) | YES | - |
-| sector | varchar(100) | YES | - |
-| zone | varchar(100) | YES | - |
 | is_active | bool | NO | true |
 | created_at | timestamptz | NO | now() |
 | updated_at | timestamptz | NO | now() |
@@ -98,7 +96,6 @@
 | is_active | bool | NO | true |
 | created_at | timestamptz | NO | now() |
 | updated_at | timestamptz | NO | now() |
-| avatar_url | text | YES | - |
 | username | varchar(50) | YES | - |
 
 ### 8. banks
@@ -131,14 +128,11 @@
 |---------|------|----------|---------|
 | id | uuid | NO | uuid_generate_v4() |
 | reference | varchar(50) | NO | - |
-| bank_reference | varchar(100) | YES | - |
 | bank_id | uuid | NO | - |
 | assigned_agent_id | uuid | YES | - |
 | debtor_pp_id | uuid | YES | - |
 | debtor_pm_id | uuid | YES | - |
 | status | case_status (enum) | NO | 'new' |
-| product_type | varchar(100) | YES | - |
-| contract_reference | varchar(100) | YES | - |
 | default_date | date | YES | - |
 | amount_principal | numeric | NO | 0 |
 | amount_interest | numeric | NO | 0 |
@@ -153,12 +147,6 @@
 | updated_at | timestamptz | NO | now() |
 | created_by | uuid | YES | - |
 | phase | case_phase (enum) | NO | 'amicable' |
-| guarantee_type | varchar(100) | YES | - |
-| guarantee_description | text | YES | - |
-| last_bank_payment_date | date | YES | - |
-| last_bank_payment_amount | numeric | YES | - |
-| risk_level | varchar(50) | YES | - |
-| internal_notes | text | YES | - |
 | last_action_at | timestamptz | YES | - |
 | last_action_type | text | YES | - |
 | next_action_at | timestamptz | YES | - |
@@ -225,14 +213,6 @@
 | notes | text | YES | - |
 | created_at | timestamptz | NO | now() |
 | updated_at | timestamptz | NO | now() |
-| created_by | uuid | YES | - |
-| date_of_birth | date | YES | - |
-| address_work_street | text | YES | - |
-| address_work_city | varchar(100) | YES | - |
-| address_work_region | varchar(100) | YES | - |
-| alt_contact_name | varchar(255) | YES | - |
-| alt_contact_relation | varchar(100) | YES | - |
-| alt_contact_phone | varchar(50) | YES | - |
 | photo_url | text | YES | - |
 
 ### 14. documents
@@ -307,14 +287,12 @@
 | case_id | uuid | NO | - |
 | amount | numeric | NO | - |
 | due_date | date | NO | - |
-| payment_method | varchar(50) | YES | - |
 | status | promise_status (enum) | NO | 'pending' |
 | status_changed_at | timestamptz | YES | - |
 | status_changed_by | uuid | YES | - |
 | status_notes | text | YES | - |
 | created_by | uuid | NO | - |
 | created_at | timestamptz | NO | now() |
-| reference | varchar(50) | YES | - |
 | notes | text | YES | - |
 
 ---
@@ -566,7 +544,6 @@ Tables avec RLS : action_attachments, actions, admins, agents, audit_logs, bank_
 | agents_username_key | UNIQUE btree (username) |
 | idx_agents_active | btree (is_active) WHERE is_active = true |
 | idx_agents_email | btree (email) |
-| idx_agents_sector | btree (sector) WHERE sector IS NOT NULL |
 
 ### audit_logs
 | Index | Definition |
@@ -785,7 +762,7 @@ Tables avec RLS : action_attachments, actions, admins, agents, audit_logs, bank_
 | Fonction | Parametres | Description |
 |----------|-----------|-------------|
 | `list_case_promises` | p_case_id uuid | Liste les promesses d'un dossier |
-| `create_promise` | p_case_id, p_amount, p_due_date, p_payment_method, p_reference, p_notes | Cree une promesse |
+| `create_promise` | p_case_id, p_amount, p_due_date, p_notes | Cree une promesse |
 | `update_promise_status` | p_promise_id, p_status, p_status_notes, p_new_due_date | Met a jour le statut |
 | `delete_promise` | p_promise_id uuid | Supprime une promesse |
 

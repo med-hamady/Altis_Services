@@ -444,7 +444,7 @@ Meme pattern que list_admins, sur la table agents.
 
 ### update_agent
 
-- **Arguments** : p_id uuid, p_full_name varchar DEFAULT NULL, p_phone varchar DEFAULT NULL, p_sector varchar DEFAULT NULL, p_is_active boolean DEFAULT NULL
+- **Arguments** : p_id uuid, p_full_name varchar DEFAULT NULL, p_phone varchar DEFAULT NULL, p_is_active boolean DEFAULT NULL
 - **Retour** : json
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin uniquement
@@ -583,7 +583,7 @@ Dossiers clos (status = 'closed'), filtres par role.
 - **Acces** : admin uniquement
 - **Tables** : cases
 
-INSERT depuis JSON, utilise generate_case_reference() si pas de reference. Retourne via _build_case_json.
+INSERT depuis JSON (bank_id, debtor_pp_id, debtor_pm_id, default_date, amount_principal/interest/penalties/fees, notes, phase), utilise generate_case_reference() si pas de reference. Retourne via _build_case_json.
 
 ---
 
@@ -616,7 +616,7 @@ UPDATE assigned_agent_id + status (assigned/new). Retourne via _build_case_json.
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin ou agent assigne
 
-UPDATE conditionnel via `p_data ? 'field'` pour ne modifier que les champs fournis.
+UPDATE conditionnel (phase, default_date, amount_principal/interest/penalties/fees, notes) via `p_data ? 'field'` pour ne modifier que les champs fournis.
 
 ---
 
@@ -679,7 +679,7 @@ INSERT INTO actions avec created_by = auth.uid().
 
 ### create_promise
 
-- **Arguments** : p_case_id uuid, p_amount numeric, p_due_date date, p_payment_method varchar, p_reference varchar, p_notes text
+- **Arguments** : p_case_id uuid, p_amount numeric, p_due_date date, p_notes text
 - **Retour** : json
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin ou agent
@@ -800,7 +800,7 @@ Champs modifiables : name, address, city, phone, email, logo_url.
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin ou l'utilisateur lui-meme
 
-Champs modifiables : full_name, phone, job_title, avatar_url.
+Champs modifiables : full_name, phone, job_title.
 
 ---
 
@@ -877,7 +877,7 @@ COUNT DISTINCT debtor_pp_id/debtor_pm_id GROUP BY bank_id.
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin uniquement
 
-INSERT tous les champs de debtors_pp depuis JSON, created_by = auth.uid().
+INSERT les champs de debtors_pp depuis JSON (first_name, last_name, id_type, id_number, phone_primary, phone_secondary, email, address_street, address_city, address_region, employer, occupation, notes, photo_url).
 
 ---
 

@@ -119,7 +119,7 @@ export function useUpdateBankUserProfile() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Pick<BankUser, 'full_name' | 'phone' | 'job_title' | 'avatar_url'>> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Pick<BankUser, 'full_name' | 'phone' | 'job_title'>> }) => {
       const { data: result, error } = await supabase
         .rpc('update_bank_user_profile' as never, {
           p_user_id: id,

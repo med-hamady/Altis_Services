@@ -47,16 +47,11 @@ interface UpdateCaseInput {
   id: string
   phase?: string
   default_date?: string | null
-  product_type?: string | null
-  contract_reference?: string | null
-  risk_level?: string | null
   amount_principal?: number
   amount_interest?: number
   amount_penalties?: number
   amount_fees?: number
-  guarantee_description?: string | null
   notes?: string | null
-  internal_notes?: string | null
 }
 
 export function useUpdateCase() {
@@ -187,8 +182,6 @@ interface CreatePromiseInput {
   case_id: string
   amount: number
   due_date: string
-  payment_method?: string
-  reference?: string
   notes?: string
 }
 
@@ -202,8 +195,6 @@ export function useCreatePromise() {
           p_case_id: input.case_id,
           p_amount: input.amount,
           p_due_date: input.due_date,
-          p_payment_method: input.payment_method || null,
-          p_reference: input.reference || null,
           p_notes: input.notes || null,
         } as never)
 

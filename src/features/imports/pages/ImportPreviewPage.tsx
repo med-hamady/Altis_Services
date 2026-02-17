@@ -441,11 +441,8 @@ function CasePreviewCard({
           </CardHeader>
           <CardContent className="space-y-1">
             <InfoRow label="Banque" value={bankName} icon={Building2} />
-            <Field label="Réf. banque" value={String(d.bank_reference ?? '')} fieldKey="bank_reference" />
             <Field label="Date d'ouverture" value={String(d.open_date ?? '')} fieldKey="open_date" icon={Calendar} />
             <Field label="Date de défaut" value={String(d.default_date ?? '')} fieldKey="default_date" icon={Calendar} />
-            <Field label="Produit" value={String(d.product_type ?? '')} fieldKey="product_type" />
-            <Field label="Réf. contrat" value={String(d.contract_ref ?? '')} fieldKey="contract_ref" />
             <Field label="Traitement" value={d.treatment_type ? (CasePhaseLabels[d.treatment_type as CasePhase] || String(d.treatment_type)) : ''} fieldKey="treatment_type" />
 
             {/* Solde restant */}
@@ -534,14 +531,6 @@ function CasePreviewCard({
                 <span>{formatAmountFn(displayTotal)}</span>
               </div>
             </div>
-
-            {/* Garantie — masqué si vide */}
-            {!!(d.guarantee_type || d.guarantee_description) && (
-              <div className="mt-4 pt-3 border-t space-y-1">
-                <Field label="Type garantie" value={String(d.guarantee_type ?? '')} fieldKey="guarantee_type" />
-                <Field label="Description garantie" value={String(d.guarantee_description ?? '')} fieldKey="guarantee_description" />
-              </div>
-            )}
 
             <Field label="Devise" value={String(d.currency ?? '')} fieldKey="currency" />
           </CardContent>
