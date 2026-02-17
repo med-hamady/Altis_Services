@@ -30,7 +30,6 @@ import { Upload, X, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { usePermissions } from '@/contexts/AuthContext'
 import { useCreatePayment } from '../hooks/useCaseDetail'
-import { sendEmail } from '@/lib/email'
 
 const PAYMENT_METHODS = [
   { value: 'virement', label: 'Virement' },
@@ -165,36 +164,54 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance,
 
       // Notification email aux admins (fire-and-forget, ne bloque pas le flux)
       if (!isAdmin) {
-        supabase
-          .rpc('get_admin_emails' as never)
-          .then(({ data: admins }: { data: unknown }) => {
-            const adminList = admins as { email: string }[] | null
-            const emails = adminList?.map(a => a.email).filter(Boolean) as string[] | undefined
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+        const htmlBody = `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+            <h2 style="color:#1a56db;margin-bottom:16px">Nouveau paiement à valider</h2>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#6b7280">Dossier</td><td style="padding:8px 0;font-weight:600">${caseReference || caseId}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Débiteur</td><td style="padding:8px 0;font-weight:600">${debtorName || '—'}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Banque</td><td style="padding:8px 0;font-weight:600">${bankName || '—'}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Montant</td><td style="padding:8px 0;font-weight:600">${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MRU', minimumFractionDigits: 0 }).format(amount)}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Date</td><td style="padding:8px 0">${data.payment_date}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Mode</td><td style="padding:8px 0">${method}</td></tr>
+              ${data.transaction_reference ? `<tr><td style="padding:8px 0;color:#6b7280">Référence</td><td style="padding:8px 0">${data.transaction_reference}</td></tr>` : ''}
+            </table>
+            <p style="margin-top:20px;color:#6b7280;font-size:14px">Connectez-vous à la plateforme pour valider ou rejeter ce paiement.</p>
+            <p style="margin-top:8px;color:#9ca3af;font-size:12px">— Altis Services</p>
+          </div>
+        `
+        // Récupère les emails admins via RPC puis envoie via fetch direct (plus fiable qu'invoke)
+        fetch(`${supabaseUrl}/rest/v1/rpc/get_admin_emails`, {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: '{}',
+        })
+          .then(r => r.json())
+          .then((admins: { email: string }[]) => {
+            const emails = admins?.map(a => a.email).filter(Boolean)
             if (emails && emails.length > 0) {
-              sendEmail({
-                to: emails,
-                subject: `Nouveau paiement déclaré — Dossier ${caseReference || caseId}`,
-                html: `
-                  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-                    <h2 style="color:#1a56db;margin-bottom:16px">Nouveau paiement à valider</h2>
-                    <table style="width:100%;border-collapse:collapse">
-                      <tr><td style="padding:8px 0;color:#6b7280">Dossier</td><td style="padding:8px 0;font-weight:600">${caseReference || caseId}</td></tr>
-                      <tr><td style="padding:8px 0;color:#6b7280">Débiteur</td><td style="padding:8px 0;font-weight:600">${debtorName || '—'}</td></tr>
-                      <tr><td style="padding:8px 0;color:#6b7280">Banque</td><td style="padding:8px 0;font-weight:600">${bankName || '—'}</td></tr>
-                      <tr><td style="padding:8px 0;color:#6b7280">Montant</td><td style="padding:8px 0;font-weight:600">${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MRU', minimumFractionDigits: 0 }).format(amount)}</td></tr>
-                      <tr><td style="padding:8px 0;color:#6b7280">Date</td><td style="padding:8px 0">${data.payment_date}</td></tr>
-                      <tr><td style="padding:8px 0;color:#6b7280">Mode</td><td style="padding:8px 0">${method}</td></tr>
-                      ${data.transaction_reference ? `<tr><td style="padding:8px 0;color:#6b7280">Référence</td><td style="padding:8px 0">${data.transaction_reference}</td></tr>` : ''}
-                    </table>
-                    <p style="margin-top:20px;color:#6b7280;font-size:14px">Connectez-vous à la plateforme pour valider ou rejeter ce paiement.</p>
-                    <p style="margin-top:8px;color:#9ca3af;font-size:12px">— Altis Services</p>
-                  </div>
-                `,
-              }).catch(() => {
-                // Silencieux : l'email est secondaire, ne pas bloquer l'UX
+              return fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                method: 'POST',
+                headers: {
+                  'apikey': supabaseAnonKey,
+                  'Authorization': `Bearer ${supabaseAnonKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  to: emails,
+                  subject: `Nouveau paiement déclaré — Dossier ${caseReference || caseId}`,
+                  html: htmlBody,
+                }),
               })
             }
           })
+          .catch(err => console.error('[Email notification]', err))
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur inconnue'
