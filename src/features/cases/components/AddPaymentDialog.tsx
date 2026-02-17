@@ -163,9 +163,11 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance,
       form.reset()
 
       // Notification email aux admins (fire-and-forget, ne bloque pas le flux)
+      console.log('[Email] isAdmin =', isAdmin, '→ notification', isAdmin ? 'ignorée (admin)' : 'en cours...')
       if (!isAdmin) {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+        console.log('[Email] Appel get_admin_emails...')
         const htmlBody = `
           <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
             <h2 style="color:#1a56db;margin-bottom:16px">Nouveau paiement à valider</h2>
@@ -194,8 +196,11 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance,
         })
           .then(r => r.json())
           .then((admins: { email: string }[]) => {
+            console.log('[Email] Réponse get_admin_emails:', admins)
             const emails = admins?.map(a => a.email).filter(Boolean)
+            console.log('[Email] Emails destinataires:', emails)
             if (emails && emails.length > 0) {
+              console.log('[Email] Envoi vers', emails)
               return fetch(`${supabaseUrl}/functions/v1/send-email`, {
                 method: 'POST',
                 headers: {
@@ -211,7 +216,8 @@ export function AddPaymentDialog({ caseId, open, onOpenChange, remainingBalance,
               })
             }
           })
-          .catch(err => console.error('[Email notification]', err))
+          .then(res => { if (res) console.log('[Email] Réponse send-email status:', res.status) })
+          .catch(err => console.error('[Email notification] ERREUR:', err))
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur inconnue'
