@@ -44,6 +44,11 @@ import {
   Pencil,
   Plus,
   Info,
+  Eye,
+  Download,
+  Maximize2,
+  Minimize2,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -78,6 +83,7 @@ import type { ActionDialogResult } from '../components/AddActionDialog'
 import { AddPromiseDialog } from '../components/AddPromiseDialog'
 import { EditCaseDialog } from '../components/EditCaseDialog'
 import { AddPaymentDialog } from '../components/AddPaymentDialog'
+import { supabase } from '@/lib/supabase/client'
 import { ActionResult, ActionType, PromiseStatus } from '@/types/enums'
 import {
   CaseStatusLabels,
@@ -195,6 +201,11 @@ export function CaseDetailPage() {
   const [deletingPromiseId, setDeletingPromiseId] = useState<string | null>(null)
 
   // État pour info complémentaire
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false)
+  const [notesDialogContent, setNotesDialogContent] = useState('')
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false)
+  const [receiptDialogUrl, setReceiptDialogUrl] = useState('')
+  const [receiptFullscreen, setReceiptFullscreen] = useState(false)
   const [addInfoOpen, setAddInfoOpen] = useState(false)
   const [infoLabel, setInfoLabel] = useState('')
   const [infoValue, setInfoValue] = useState('')
@@ -783,7 +794,20 @@ export function CaseDetailPage() {
                           </span>
                         </TableCell>
                         <TableCell className="hidden md:table-cell max-w-[300px]">
-                          <p className="text-sm truncate">{action.notes || '—'}</p>
+                          {action.notes ? (
+                            <p
+                              className="text-sm truncate cursor-pointer hover:text-primary transition-colors"
+                              title="Cliquer pour voir le texte complet"
+                              onClick={() => {
+                                setNotesDialogContent(action.notes!)
+                                setNotesDialogOpen(true)
+                              }}
+                            >
+                              {action.notes}
+                            </p>
+                          ) : (
+                            <p className="text-sm">—</p>
+                          )}
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-sm">
                           {action.next_action_type ? (
@@ -937,6 +961,7 @@ export function CaseDetailPage() {
                       <TableHead>Méthode</TableHead>
                       <TableHead>Réf. transaction</TableHead>
                       <TableHead>Statut</TableHead>
+                      <TableHead>Justificatif</TableHead>
                       {canValidatePayment && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -966,6 +991,31 @@ export function CaseDetailPage() {
                               </span>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {payment.receipt_path ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={async () => {
+                                const { data, error } = await supabase.storage
+                                  .from('case_documents')
+                                  .createSignedUrl(payment.receipt_path!, 3600)
+                                if (error || !data?.signedUrl) {
+                                  toast.error('Impossible de charger le justificatif')
+                                  return
+                                }
+                                setReceiptDialogUrl(data.signedUrl)
+                                setReceiptDialogOpen(true)
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Voir
+                            </Button>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         {canValidatePayment && (
                           <TableCell className="text-right">
@@ -1210,6 +1260,122 @@ export function CaseDetailPage() {
               {createExtraInfo.isPending ? 'Ajout...' : 'Ajouter'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog compte-rendu complet */}
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Compte-rendu</DialogTitle>
+            <DialogDescription>Détail complet du compte-rendu de l'action.</DialogDescription>
+          </DialogHeader>
+          <p className="text-sm whitespace-pre-wrap">{notesDialogContent}</p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog justificatif paiement */}
+      <Dialog open={receiptDialogOpen} onOpenChange={(open) => {
+        setReceiptDialogOpen(open)
+        if (!open) setReceiptFullscreen(false)
+      }}>
+        <DialogContent className={receiptFullscreen
+          ? "fixed inset-0 max-w-none w-screen h-screen rounded-none translate-x-0 translate-y-0 top-0 left-0 p-0 flex flex-col"
+          : "sm:max-w-[600px]"
+        }>
+          {receiptFullscreen ? (
+            // Mode plein écran
+            <>
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
+                <span className="font-semibold">Justificatif de paiement</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      const link = document.createElement('a')
+                      link.href = receiptDialogUrl
+                      link.download = 'justificatif'
+                      link.click()
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Télécharger
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setReceiptFullscreen(false)}>
+                    <Minimize2 className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setReceiptDialogOpen(false)
+                    setReceiptFullscreen(false)
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto flex items-center justify-center bg-black/5 p-4">
+                {receiptDialogUrl && (
+                  receiptDialogUrl.match(/\.pdf/i) ? (
+                    <iframe src={receiptDialogUrl} className="w-full h-full" title="Justificatif PDF" />
+                  ) : (
+                    <img
+                      src={receiptDialogUrl}
+                      alt="Justificatif de paiement"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  )
+                )}
+              </div>
+            </>
+          ) : (
+            // Mode normal
+            <>
+              <DialogHeader>
+                <DialogTitle>Justificatif de paiement</DialogTitle>
+                <DialogDescription>Image ou document justificatif associé au paiement.</DialogDescription>
+              </DialogHeader>
+              {receiptDialogUrl && (
+                receiptDialogUrl.match(/\.pdf/i) ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <FileText className="h-12 w-12 text-muted-foreground" />
+                    <a
+                      href={receiptDialogUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      Ouvrir le PDF
+                    </a>
+                  </div>
+                ) : (
+                  <img
+                    src={receiptDialogUrl}
+                    alt="Justificatif de paiement"
+                    className="w-full rounded-md object-contain max-h-[60vh]"
+                  />
+                )
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const link = document.createElement('a')
+                    link.href = receiptDialogUrl
+                    link.download = 'justificatif'
+                    link.click()
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Télécharger
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setReceiptFullscreen(true)}>
+                  <Maximize2 className="h-4 w-4 mr-1" />
+                  Plein écran
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

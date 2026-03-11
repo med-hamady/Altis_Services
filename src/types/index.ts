@@ -273,6 +273,7 @@ export interface Payment {
   validated_by: string | null
   validated_at: string | null
   rejection_reason: string | null
+  receipt_path: string | null
   declared_by: string
   declared_at: string
 
