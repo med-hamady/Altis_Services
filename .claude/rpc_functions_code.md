@@ -3,7 +3,7 @@
 > Document auto-genere a partir de Supabase
 > Derniere mise a jour : 2026-02-17
 
-**Total : 75 fonctions** (15 anciennes + 59 nouvelles + 1 helper)
+**Total : 77 fonctions** (15 anciennes + 61 nouvelles + 1 helper)
 
 ---
 
@@ -21,8 +21,8 @@ change_user_password, delete_auth_user
 ### D. Case extra info (3)
 create_case_extra_info, get_case_extra_info, delete_case_extra_info
 
-### E. Profils et notifications (2) — NOUVEAU
-get_user_profile, get_admin_emails
+### E. Profils et notifications (4) — NOUVEAU
+get_user_profile, get_admin_emails, get_pending_action_notifications, mark_action_notification_sent
 
 ### F. Gestion des utilisateurs (9) — NOUVEAU
 list_admins, create_admin, update_admin, list_agents, create_agent, update_agent, list_bank_users, create_bank_user, update_bank_user
@@ -1020,3 +1020,25 @@ Tous les dossiers d'une banque avec toutes les relations, ORDER BY created_at DE
 - **Tables** : cases
 
 Statistiques financieres completes d'une banque.
+
+---
+
+### get_pending_action_notifications
+
+- **Arguments** : aucun
+- **Retour** : TABLE (action_id uuid, case_id uuid, case_reference varchar, agent_id uuid, agent_email varchar, agent_full_name varchar, debtor_name text, bank_name varchar, next_action_type text, next_action_date date, next_action_notes text, remaining_balance numeric)
+- **Securite** : SECURITY DEFINER, search_path = public
+- **Tables** : actions, cases, agents, banks, debtors_pp, debtors_pm, action_notifications
+
+Retourne les actions planifiees dont `next_action_date <= CURRENT_DATE`, sur des dossiers non clos/payes, avec un agent actif, et qui n'ont pas encore recu de notification (pas d'entree dans `action_notifications`). Utilisee par l'edge function `notify-actions` pour envoyer les rappels par email.
+
+---
+
+### mark_action_notification_sent
+
+- **Arguments** : p_action_id uuid, p_case_id uuid, p_agent_id uuid
+- **Retour** : void
+- **Securite** : SECURITY DEFINER, search_path = public
+- **Tables** : action_notifications
+
+Insere une ligne dans `action_notifications` pour marquer une action comme notifiee. Utilise `ON CONFLICT (action_id) DO NOTHING` pour eviter les doublons. Appelee par l'edge function `notify-actions` apres chaque envoi d'email reussi.

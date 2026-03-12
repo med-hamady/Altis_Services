@@ -295,6 +295,16 @@
 | created_at | timestamptz | NO | now() |
 | notes | text | YES | - |
 
+### 19. action_notifications
+| Colonne | Type | Nullable | Default |
+|---------|------|----------|---------|
+| id | uuid | NO | gen_random_uuid() |
+| action_id | uuid | NO | - |
+| case_id | uuid | NO | - |
+| agent_id | uuid | NO | - |
+| notification_type | varchar(20) | NO | 'email' |
+| sent_at | timestamptz | NO | now() |
+
 ---
 
 ## Contraintes (PK, FK, Unique)
@@ -321,6 +331,7 @@
 | imports | imports_pkey | id |
 | payments | payments_pkey | id |
 | promises | promises_pkey | id |
+| action_notifications | action_notifications_pkey | id |
 
 ### Cles Etrangeres (FK)
 
@@ -346,6 +357,8 @@
 | payments | payments_case_id_fkey | case_id | cases | id |
 | payments | payments_validated_by_fkey | validated_by | admins | id |
 | promises | promises_case_id_fkey | case_id | cases | id |
+| action_notifications | action_notifications_action_id_fkey | action_id | actions | id |
+| action_notifications | action_notifications_case_id_fkey | case_id | cases | id |
 
 ### Contraintes Unique
 
@@ -359,6 +372,7 @@
 | bank_users | bank_users_username_key | username |
 | banks | banks_code_key | code |
 | cases | cases_reference_key | reference |
+| action_notifications | action_notifications_action_id_key | action_id |
 
 ## RLS - Row Level Security
 
@@ -366,7 +380,7 @@
 
 > **Toutes les tables ont RLS active (rls_enabled = true, rls_forced = false)**
 
-Tables avec RLS : action_attachments, actions, admins, agents, audit_logs, bank_contacts, bank_users, banks, case_extra_info, cases, contact_history, debtors_pm, debtors_pp, documents, import_rows, imports, payments, promises
+Tables avec RLS : action_attachments, action_notifications, actions, admins, agents, audit_logs, bank_contacts, bank_users, banks, case_extra_info, cases, contact_history, debtors_pm, debtors_pp, documents, import_rows, imports, payments, promises
 
 ### Politiques RLS
 
@@ -377,6 +391,12 @@ Tables avec RLS : action_attachments, actions, admins, agents, audit_logs, bank_
 | action_attachments_insert | INSERT | authenticated | - | is_admin() OR is_agent() |
 | action_attachments_update | UPDATE | authenticated | is_admin() | - |
 | action_attachments_delete | DELETE | authenticated | is_admin() | - |
+
+#### action_notifications
+| Policy | Cmd | Roles | Condition (qual) | With Check |
+|--------|-----|-------|-------------------|------------|
+| action_notifications_admin_select | SELECT | authenticated | EXISTS (SELECT 1 FROM admins WHERE id = auth.uid() AND is_active) | - |
+| action_notifications_service_insert | INSERT | authenticated, service_role | - | true |
 
 #### actions
 | Policy | Cmd | Roles | Condition (qual) | With Check |
@@ -662,6 +682,13 @@ Tables avec RLS : action_attachments, actions, admins, agents, audit_logs, bank_
 | idx_promises_pending | btree (due_date) WHERE status = 'pending' |
 | idx_promises_status | btree (status) |
 
+### action_notifications
+| Index | Definition |
+|-------|-----------|
+| action_notifications_pkey | UNIQUE btree (id) |
+| action_notifications_action_id_key | UNIQUE btree (action_id) |
+| idx_action_notifications_action_id | btree (action_id) |
+
 ---
 
 ## Enums / Types personnalises
@@ -698,7 +725,7 @@ Tables avec RLS : action_attachments, actions, admins, agents, audit_logs, bank_
 
 ---
 
-## Fonctions RPC (75 fonctions)
+## Fonctions RPC (77 fonctions)
 
 ### Helpers d'authentification (6 fonctions)
 | Fonction | Retour | Description |
@@ -833,10 +860,12 @@ Tables avec RLS : action_attachments, actions, admins, agents, audit_logs, bank_
 | `create_case_extra_info` | p_case_id uuid, p_label text, p_value text | Ajoute une info complementaire |
 | `delete_case_extra_info` | p_id uuid | Supprime une info complementaire |
 
-### Notifications (1 fonction)
+### Notifications (3 fonctions)
 | Fonction | Parametres | Description |
 |----------|-----------|-------------|
 | `get_admin_emails` | - | Emails des admins actifs (pour notifications) |
+| `get_pending_action_notifications` | - | Actions planifiees du jour/en retard non encore notifiees |
+| `mark_action_notification_sent` | p_action_id uuid, p_case_id uuid, p_agent_id uuid | Marque une action comme notifiee |
 
 ### Helpers internes (1 fonction)
 | Fonction | Parametres | Description |

@@ -37,7 +37,11 @@
       "WebFetch(domain:officeopenxml.com)",
       "Bash(del /f \"node_modules\\\\.tmp\\\\tsconfig.app.tsbuildinfo\")",
       "Bash(npm ls:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(supabase secrets set:*)",
+      "Bash(source:*)",
+      "Bash(supabase db query:*)",
+      "Bash(supabase db push:*)"
     ]
   }
 }

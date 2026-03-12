@@ -40,16 +40,16 @@ Altis Services est une application web de gestion de recouvrement de creances. E
 
 ## Architecture de la base de donnees
 
-- **18 tables** avec RLS active sur toutes
-- **66 politiques RLS** pour le controle d'acces par role
-- **86 fonctions** (75 RPC + 11 trigger)
+- **19 tables** avec RLS active sur toutes
+- **68 politiques RLS** pour le controle d'acces par role
+- **88 fonctions** (77 RPC + 11 trigger)
 - **23 triggers** (audit, calcul automatique, changement de statut)
 - **10 enums** pour les types metier
-- **79 index** pour les performances
+- **82 index** pour les performances
 
 Documentation complete dans :
 - `.claude/bdd_prod.md` - Schema complet (tables, colonnes, contraintes, RLS, index, enums)
-- `.claude/rpc_functions_code.md` - Code source des 75 fonctions RPC
+- `.claude/rpc_functions_code.md` - Code source des 77 fonctions RPC
 - `.claude/triggers_code.md` - Code source des 11 fonctions trigger + recap des 23 triggers
 
 ## Cycle de vie d'un dossier (case)
