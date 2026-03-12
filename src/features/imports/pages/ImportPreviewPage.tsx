@@ -762,9 +762,9 @@ export function ImportPreviewPage() {
                   <p className="mt-1 text-xs text-yellow-600">{importData.error_message}</p>
                 )}
               </div>
-              <Button variant="outline" onClick={() => navigate('/cases')}>
+              <Button variant="outline" onClick={() => navigate(`/cases?import=${id}`)}>
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Voir tous les dossiers
+                Voir les dossiers de cet import
               </Button>
             </CardContent>
           </Card>

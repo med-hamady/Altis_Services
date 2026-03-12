@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { Upload, FileSpreadsheet, Loader2, CheckCircle, XCircle, AlertTriangle, Eye } from 'lucide-react'
+import { Upload, FileSpreadsheet, Loader2, CheckCircle, XCircle, AlertTriangle, FolderKanban } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useBanks } from '@/features/banks/hooks/useBanks'
@@ -233,22 +233,24 @@ export function ImportsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {(imp.status === 'ready_for_review' || imp.status === 'approved' || imp.status === 'failed') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/imports/${imp.id}`)}
-                        >
-                          <Eye className="mr-1 h-3 w-3" />
-                          Voir
-                        </Button>
-                      )}
-                      {imp.status === 'processing' && (
-                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          En cours...
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {imp.status === 'approved' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/cases?import=${imp.id}`)}
+                          >
+                            <FolderKanban className="mr-1 h-3 w-3" />
+                            Dossiers
+                          </Button>
+                        )}
+                        {imp.status === 'processing' && (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            En cours...
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

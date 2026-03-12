@@ -32,6 +32,8 @@
 | payments | tr_payments_update_case_status | AFTER | INSERT, UPDATE | update_case_status_on_payment() |
 | payments | trg_payment_change | AFTER | INSERT, UPDATE | trg_after_payment_change() |
 | promises | trg_promise_insert | AFTER | INSERT | trg_after_promise_insert() |
+| promises | trg_on_promise_broken | AFTER | UPDATE | trg_promise_revert_case_status() |
+| promises | trg_on_promise_deleted | AFTER | DELETE | trg_promise_revert_case_status() |
 
 ---
 
@@ -437,5 +439,22 @@ BEGIN
   WHERE id = NEW.case_id;
   RETURN NEW;
 END;
+```
+
+---
+
+### 12. trg_promise_revert_case_status
+
+- **Table** : promises
+- **Triggers** : trg_on_promise_broken (AFTER UPDATE), trg_on_promise_deleted (AFTER DELETE)
+- **Evenement** : AFTER UPDATE ou AFTER DELETE
+- **Langage** : plpgsql
+- **Description** : Revient au statut "in_progress" quand une promesse est marquee 'broken' ou supprimee, si plus aucune promesse 'pending' n'existe sur le dossier
+
+```sql
+-- UPDATE : si NEW.status = 'broken' et OLD.status != 'broken'
+-- DELETE : si OLD.status = 'pending'
+-- Compte les promesses restantes avec status = 'pending' sur le dossier
+-- Si pending_count = 0 : UPDATE cases SET status = 'in_progress' WHERE id = v_case_id AND status = 'promise'
 ```
 

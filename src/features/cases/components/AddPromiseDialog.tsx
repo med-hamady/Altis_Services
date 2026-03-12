@@ -75,7 +75,12 @@ export function AddPromiseDialog({ caseId, open, onOpenChange, remainingBalance 
       onOpenChange(false)
       form.reset()
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erreur inconnue'
+      console.error('Promise creation error:', error)
+      const message = error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : JSON.stringify(error)
       setServerError(message)
       toast.error('Erreur lors de l\'enregistrement de la promesse')
     }

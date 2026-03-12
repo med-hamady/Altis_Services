@@ -298,24 +298,21 @@ Deno.serve(async (req) => {
           else phase = "amicable";
         }
 
+        // Note: bank_reference, product_type, contract_reference, guarantee_type,
+        // guarantee_description ont été supprimées de la table cases (migration 042)
         const caseInsert: Record<string, unknown> = {
           reference,
-          bank_reference: data.bank_reference || null,
           bank_id: bankId,
           debtor_pp_id: debtorPpId,
           debtor_pm_id: debtorPmId,
           assigned_agent_id: assignedAgentId,
           status: "new",
           phase,
-          product_type: data.product_type || null,
-          contract_reference: data.contract_ref || null,
           default_date: data.default_date || null,
           amount_principal: amountPrincipal,
           amount_interest: amountInterest,
           amount_penalties: amountPenalties,
           amount_fees: amountFees,
-          guarantee_type: data.guarantee_type || null,
-          guarantee_description: data.guarantee_description || null,
           notes: data.notes || null,
           created_by: importData.uploaded_by,
         };

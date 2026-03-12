@@ -4,11 +4,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Plus, FolderKanban, Search, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, FolderKanban, Search, X, FileSpreadsheet, ArrowLeft } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { usePermissions } from '@/contexts/AuthContext'
 import { useCases } from '../hooks/useCases'
 import { useBanks } from '@/features/banks/hooks/useBanks'
+import { useImport, useImportRows } from '@/features/imports/hooks/useImports'
 import { CreateCaseDialog } from '../components/CreateCaseDialog'
 
 const statusLabels: Record<string, string> = {
@@ -29,6 +31,22 @@ export function CasesListPage() {
   const [showCreateCase, setShowCreateCase] = useState(false)
   const canCreateCase = isAdmin || isBankUser
 
+  // Filtre par import
+  const importId = searchParams.get('import') || null
+  const { data: importData } = useImport(importId)
+  const { data: importRows } = useImportRows(importId)
+
+  // Extraire les IDs des dossiers créés par l'import depuis import_rows.proposed_json._case_id
+  const importCaseIds = useMemo(() => {
+    if (!importId || !importRows) return null
+    const ids = new Set<string>()
+    for (const row of importRows) {
+      const caseId = (row.proposed_json as Record<string, unknown>)?._case_id as string | undefined
+      if (caseId) ids.add(caseId)
+    }
+    return ids
+  }, [importId, importRows])
+
   // Filtres persistés dans l'URL
   const searchQuery = searchParams.get('q') || ''
   const selectedBankId = searchParams.get('bank') || 'all'
@@ -47,9 +65,13 @@ export function CasesListPage() {
   }, [setSearchParams])
   // Filtrage des dossiers
   const filteredCases = useMemo(() => {
-    if (!cases) return []
+    let sourceCases = cases || []
+    if (importId && importCaseIds) {
+      sourceCases = sourceCases.filter(c => importCaseIds.has(c.id))
+    }
+    if (!sourceCases.length) return []
 
-    return cases.filter((c) => {
+    return sourceCases.filter((c) => {
       // Filtre par banque
       if (selectedBankId !== 'all' && c.bank_id !== selectedBankId) return false
 
@@ -79,9 +101,9 @@ export function CasesListPage() {
 
       return true
     })
-  }, [cases, selectedBankId, selectedStatus, selectedGuarantee, searchQuery])
+  }, [cases, importCaseIds, importId, selectedBankId, selectedStatus, selectedGuarantee, searchQuery])
 
-  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || selectedGuarantee !== 'all' || searchQuery !== ''
+  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || selectedGuarantee !== 'all' || searchQuery !== '' || !!importId
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true })
@@ -114,6 +136,33 @@ export function CasesListPage() {
           </Button>
         )}
       </div>
+
+      {/* Bandeau filtre import */}
+      {importId && (
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/10">
+          <CardContent className="flex items-center gap-4 py-4">
+            <FileSpreadsheet className="h-8 w-8 shrink-0 text-blue-600" />
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold">
+                Dossiers de l'import : {importData?.file_name || 'fichier.xlsx'}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {importData?.bank?.name || '—'} — {importCaseIds?.size || 0} dossier(s)
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate(`/imports/${importId}`)}>
+                <ArrowLeft className="mr-1 h-3 w-3" />
+                Retour à l'import
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="mr-1 h-3 w-3" />
+                Voir tous les dossiers
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filtres */}
       <Card>
@@ -199,9 +248,9 @@ export function CasesListPage() {
       {/* Liste */}
       <Card>
         <CardHeader>
-          <CardTitle>{isAgent ? 'Dossiers affectés' : 'Tous les dossiers'}</CardTitle>
+          <CardTitle>{importId ? 'Dossiers de l\'import' : isAgent ? 'Dossiers affectés' : 'Tous les dossiers'}</CardTitle>
           <CardDescription>
-            {filteredCases.length} dossier(s){hasActiveFilters && ` (sur ${cases?.length || 0} au total)`}
+            {filteredCases.length} dossier(s){hasActiveFilters && !importId && ` (sur ${cases?.length || 0} au total)`}
           </CardDescription>
         </CardHeader>
         <CardContent>
