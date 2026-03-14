@@ -1,7 +1,7 @@
 # Base de Donnees Production - Altis Services
 
 > Document auto-genere a partir de Supabase
-> Derniere mise a jour : 2026-02-17
+> Derniere mise a jour : 2026-03-14
 
 ---
 
@@ -295,7 +295,37 @@
 | created_at | timestamptz | NO | now() |
 | notes | text | YES | - |
 
-### 19. action_notifications
+### 19. proposals
+| Colonne | Type | Nullable | Default |
+|---------|------|----------|---------|
+| id | uuid | NO | uuid_generate_v4() |
+| case_id | uuid | NO | FK → cases(id) ON DELETE CASCADE |
+| created_by | uuid | NO | - |
+| type | proposal_type (enum) | NO | - |
+| amount | numeric(15,2) | YES | - |
+| monthly_amount | numeric(15,2) | YES | - |
+| start_date | date | YES | - |
+| end_date | date | YES | - |
+| duration_months | int4 | YES | - |
+| status | proposal_status (enum) | NO | 'pending' |
+| decision_by | uuid | YES | - |
+| decision_at | timestamptz | YES | - |
+| decision_note | text | YES | - |
+| parent_proposal_id | uuid | YES | FK → proposals(id) |
+| notes | text | YES | - |
+| created_at | timestamptz | NO | now() |
+
+### 20. proposal_items
+| Colonne | Type | Nullable | Default |
+|---------|------|----------|---------|
+| id | uuid | NO | uuid_generate_v4() |
+| proposal_id | uuid | NO | FK → proposals(id) ON DELETE CASCADE |
+| due_date | date | NO | - |
+| amount | numeric(15,2) | NO | CHECK > 0 |
+| sort_order | int4 | NO | 0 |
+| notes | text | YES | - |
+
+### 21. action_notifications
 | Colonne | Type | Nullable | Default |
 |---------|------|----------|---------|
 | id | uuid | NO | gen_random_uuid() |
@@ -304,6 +334,8 @@
 | agent_id | uuid | NO | - |
 | notification_type | varchar(20) | NO | 'email' |
 | sent_at | timestamptz | NO | now() |
+
+> **Note** : promises.proposal_id (uuid, nullable, FK → proposals(id)) ajoute par migration 051
 
 ---
 
@@ -331,6 +363,8 @@
 | imports | imports_pkey | id |
 | payments | payments_pkey | id |
 | promises | promises_pkey | id |
+| proposals | proposals_pkey | id |
+| proposal_items | proposal_items_pkey | id |
 | action_notifications | action_notifications_pkey | id |
 
 ### Cles Etrangeres (FK)
@@ -357,6 +391,10 @@
 | payments | payments_case_id_fkey | case_id | cases | id |
 | payments | payments_validated_by_fkey | validated_by | admins | id |
 | promises | promises_case_id_fkey | case_id | cases | id |
+| promises | promises_proposal_id_fkey | proposal_id | proposals | id |
+| proposals | proposals_case_id_fkey | case_id | cases | id |
+| proposals | proposals_parent_proposal_id_fkey | parent_proposal_id | proposals | id |
+| proposal_items | proposal_items_proposal_id_fkey | proposal_id | proposals | id |
 | action_notifications | action_notifications_action_id_fkey | action_id | actions | id |
 | action_notifications | action_notifications_case_id_fkey | case_id | cases | id |
 
@@ -380,7 +418,7 @@
 
 > **Toutes les tables ont RLS active (rls_enabled = true, rls_forced = false)**
 
-Tables avec RLS : action_attachments, action_notifications, actions, admins, agents, audit_logs, bank_contacts, bank_users, banks, case_extra_info, cases, contact_history, debtors_pm, debtors_pp, documents, import_rows, imports, payments, promises
+Tables avec RLS : action_attachments, action_notifications, actions, admins, agents, audit_logs, bank_contacts, bank_users, banks, case_extra_info, cases, contact_history, debtors_pm, debtors_pp, documents, import_rows, imports, payments, promises, proposals, proposal_items
 
 ### Politiques RLS
 
@@ -527,6 +565,23 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 | promises_insert | INSERT | authenticated | - | is_admin() OR is_agent() |
 | promises_update | UPDATE | authenticated | is_admin() | - |
 | promises_delete | DELETE | authenticated | is_admin() | - |
+
+#### proposals
+| Policy | Cmd | Roles | Condition (qual) | With Check |
+|--------|-----|-------|-------------------|------------|
+| proposals_admin_all | ALL | authenticated | is_admin() | is_admin() |
+| proposals_agent_select | SELECT | authenticated | is_agent() AND agent_has_case(case_id) | - |
+| proposals_agent_insert | INSERT | authenticated | - | is_agent() AND agent_has_case(case_id) AND created_by = auth.uid() |
+| proposals_agent_update | UPDATE | authenticated | is_agent() AND agent_has_case(case_id) | is_agent() AND agent_has_case(case_id) |
+| proposals_bankuser_select | SELECT | authenticated | is_bank_user() AND case_belongs_to_user_bank(case_id) AND status = 'accepted' | - |
+
+#### proposal_items
+| Policy | Cmd | Roles | Condition (qual) | With Check |
+|--------|-----|-------|-------------------|------------|
+| proposal_items_admin_all | ALL | authenticated | is_admin() | is_admin() |
+| proposal_items_agent_select | SELECT | authenticated | is_agent() AND EXISTS(proposals p: agent_has_case(p.case_id)) | - |
+| proposal_items_agent_insert | INSERT | authenticated | - | is_agent() AND EXISTS(proposals p: agent_has_case(p.case_id)) |
+| proposal_items_bankuser_select | SELECT | authenticated | is_bank_user() AND EXISTS(proposals p: status='accepted' AND case_belongs_to_user_bank) | - |
 
 ---
 
@@ -680,7 +735,22 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 | idx_promises_case | btree (case_id) |
 | idx_promises_due | btree (due_date) |
 | idx_promises_pending | btree (due_date) WHERE status = 'pending' |
+| idx_promises_proposal | btree (proposal_id) |
 | idx_promises_status | btree (status) |
+
+### proposals
+| Index | Definition |
+|-------|-----------|
+| proposals_pkey | UNIQUE btree (id) |
+| idx_proposals_case | btree (case_id) |
+| idx_proposals_status | btree (status) |
+| idx_proposals_parent | btree (parent_proposal_id) |
+
+### proposal_items
+| Index | Definition |
+|-------|-----------|
+| proposal_items_pkey | UNIQUE btree (id) |
+| idx_proposal_items_proposal | btree (proposal_id) |
 
 ### action_notifications
 | Index | Definition |
@@ -723,9 +793,15 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 ### promise_status
 `pending` | `kept` | `broken` | `rescheduled`
 
+### proposal_type
+`monthly` | `one_time` | `schedule`
+
+### proposal_status
+`pending` | `accepted` | `rejected` | `countered` | `expired`
+
 ---
 
-## Fonctions RPC (77 fonctions)
+## Fonctions RPC (83 fonctions)
 
 ### Helpers d'authentification (6 fonctions)
 | Fonction | Retour | Description |
@@ -764,7 +840,7 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 ### Dashboard / Statistiques (5 fonctions)
 | Fonction | Parametres | Retour | Description |
 |----------|-----------|--------|-------------|
-| `get_admin_stats` | - | json | Stats admin : total dossiers, actifs, banques, agents, garanties |
+| `get_admin_stats` | - | json | Stats admin : total dossiers, actifs, banques, agents, garanties, propositions (pending/accepted/countered) |
 | `get_agent_stats` | p_agent_id uuid | json | Stats agent : mes dossiers, a traiter, promesses a venir, clos ce mois |
 | `get_bank_user_stats` | p_bank_id uuid | json | Stats banque : total, en recouvrement, montants, paiements mensuels |
 | `get_recent_actions` | p_user_id uuid, p_role text | json[] | 15 dernieres actions avec infos dossier/debiteur |
@@ -793,6 +869,16 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 | `update_promise_status` | p_promise_id, p_status, p_status_notes, p_new_due_date | Met a jour le statut |
 | `delete_promise` | p_promise_id uuid | Supprime une promesse |
 
+### Propositions (6 fonctions)
+| Fonction | Parametres | Description |
+|----------|-----------|-------------|
+| `list_case_proposals` | p_case_id uuid | Liste les propositions avec items et nom createur |
+| `create_proposal` | p_case_id, p_type, p_amount, p_monthly_amount, p_start_date, p_duration_months, p_due_date, p_items json, p_notes | Cree une proposition avec items auto-generes |
+| `accept_proposal` | p_proposal_id, p_decision_note | Accepte et genere les promesses (admin) |
+| `reject_proposal` | p_proposal_id, p_decision_note | Rejette avec motif obligatoire (admin) |
+| `counter_proposal` | p_parent_proposal_id + params create_proposal | Contre-proposition (marque ancienne countered) |
+| `delete_proposal` | p_proposal_id uuid | Supprime une proposition pending (admin) |
+
 ### Paiements (3 fonctions)
 | Fonction | Parametres | Description |
 |----------|-----------|-------------|
@@ -812,7 +898,7 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 | `list_banks` | - | Liste toutes les banques |
 | `get_bank` | p_bank_id uuid | Detail d'une banque |
 | `create_bank` | p_data json | Cree une banque |
-| `update_bank` | p_bank_id uuid, p_data json | Met a jour une banque |
+| `update_bank` | p_bank_id uuid, p_data jsonb | Met a jour une banque |
 | `delete_bank` | p_bank_id uuid | Supprime une banque |
 | `update_bank_profile` | p_bank_id uuid, p_data json | Modifie profil banque (bank_user) |
 | `update_bank_user_profile` | p_user_id uuid, p_data json | Modifie profil bank_user |

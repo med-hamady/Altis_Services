@@ -1,9 +1,9 @@
 # Fonctions RPC - Code Source Complet
 
 > Document auto-genere a partir de Supabase
-> Derniere mise a jour : 2026-02-17
+> Derniere mise a jour : 2026-03-14
 
-**Total : 77 fonctions** (15 anciennes + 61 nouvelles + 1 helper)
+**Total : 83 fonctions** (15 anciennes + 67 nouvelles + 1 helper)
 
 ---
 
@@ -47,6 +47,9 @@ list_imports, get_import, list_import_rows, create_import, delete_import, update
 
 ### M. Rapports (2) — NOUVEAU
 get_bank_report_cases, get_bank_report_stats
+
+### N. Propositions de paiement (6) — NOUVEAU
+create_proposal, list_case_proposals, accept_proposal, reject_proposal, counter_proposal, delete_proposal
 
 ---
 
@@ -485,12 +488,12 @@ SELECT avec LEFT JOIN banks, retourne json_agg avec bank imbrique.
 ### get_admin_stats
 
 - **Arguments** : aucun
-- **Retour** : json `{totalCases, casesInProgress, activeBanks, activeAgents, casesWithGuarantee}`
+- **Retour** : json `{totalCases, casesInProgress, activeBanks, activeAgents, casesWithGuarantee, proposalsPending, proposalsAccepted, proposalsCountered}`
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin uniquement
-- **Tables** : cases, banks, agents
+- **Tables** : cases, banks, agents, proposals
 
-5 requetes COUNT(*) sur cases, banks, agents.
+8 requetes COUNT(*) sur cases, banks, agents, proposals (par statut pending/accepted/countered).
 
 ---
 
@@ -509,12 +512,94 @@ SELECT avec LEFT JOIN banks, retourne json_agg avec bank imbrique.
 ### get_bank_user_stats
 
 - **Arguments** : p_bank_id uuid
-- **Retour** : json `{totalCases, casesInRecovery, recoveryRate, amountRecovered}`
+- **Retour** : json `{totalCases, recoveryRate, amountRecovered, casesWithGuarantee, proposalsPending, proposalsAccepted, proposalsCountered}`
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin ou bank_user de cette banque
-- **Tables** : cases, payments
+- **Tables** : cases, payments, proposals
 
-Calcule les totaux dus, recouvres, taux de recouvrement et montant recouvre ce mois.
+Calcule les totaux dus, recouvres, taux de recouvrement (ROUND 2 decimales), montant recouvre ce mois, dossiers avec garantie et compteurs propositions.
+
+```sql
+CREATE OR REPLACE FUNCTION get_bank_user_stats(p_bank_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_total_cases bigint;
+  v_total_due numeric;
+  v_total_recovered numeric;
+  v_amount_recovered_this_month numeric;
+  v_recovery_rate numeric;
+  v_first_day_of_month date;
+  v_cases_with_guarantee bigint;
+  v_proposals_pending bigint;
+  v_proposals_accepted bigint;
+  v_proposals_countered bigint;
+BEGIN
+  IF NOT (is_admin() OR (is_bank_user() AND get_user_bank_id() = p_bank_id)) THEN
+    RAISE EXCEPTION 'Acces refuse';
+  END IF;
+
+  v_first_day_of_month := date_trunc('month', current_date)::date;
+
+  SELECT count(*) INTO v_total_cases
+  FROM cases WHERE bank_id = p_bank_id;
+
+  SELECT COALESCE(SUM(
+    ABS(COALESCE(amount_principal, 0)) +
+    ABS(COALESCE(amount_interest, 0)) +
+    ABS(COALESCE(amount_penalties, 0)) +
+    ABS(COALESCE(amount_fees, 0))
+  ), 0) INTO v_total_due
+  FROM cases WHERE bank_id = p_bank_id;
+
+  SELECT COALESCE(SUM(pay.amount), 0) INTO v_total_recovered
+  FROM payments pay
+  INNER JOIN cases c ON c.id = pay.case_id
+  WHERE c.bank_id = p_bank_id AND pay.status = 'validated';
+
+  SELECT COALESCE(SUM(pay.amount), 0) INTO v_amount_recovered_this_month
+  FROM payments pay
+  INNER JOIN cases c ON c.id = pay.case_id
+  WHERE c.bank_id = p_bank_id
+    AND pay.status = 'validated'
+    AND pay.payment_date >= v_first_day_of_month;
+
+  IF v_total_due > 0 THEN
+    v_recovery_rate := ROUND((v_total_recovered / v_total_due) * 100, 2);
+  ELSE
+    v_recovery_rate := 0;
+  END IF;
+
+  SELECT count(*) INTO v_cases_with_guarantee
+  FROM cases WHERE bank_id = p_bank_id AND has_guarantee = true;
+
+  SELECT count(*) INTO v_proposals_pending
+  FROM proposals p INNER JOIN cases c ON c.id = p.case_id
+  WHERE c.bank_id = p_bank_id AND p.status = 'pending';
+
+  SELECT count(*) INTO v_proposals_accepted
+  FROM proposals p INNER JOIN cases c ON c.id = p.case_id
+  WHERE c.bank_id = p_bank_id AND p.status = 'accepted';
+
+  SELECT count(*) INTO v_proposals_countered
+  FROM proposals p INNER JOIN cases c ON c.id = p.case_id
+  WHERE c.bank_id = p_bank_id AND p.status = 'countered';
+
+  RETURN json_build_object(
+    'totalCases', v_total_cases,
+    'recoveryRate', v_recovery_rate,
+    'amountRecovered', v_amount_recovered_this_month,
+    'casesWithGuarantee', v_cases_with_guarantee,
+    'proposalsPending', v_proposals_pending,
+    'proposalsAccepted', v_proposals_accepted,
+    'proposalsCountered', v_proposals_countered
+  );
+END;
+$$;
+```
 
 ---
 
@@ -764,12 +849,12 @@ INSERT avec code, name, address, city, phone, email, is_active, logo_url.
 
 ### update_bank
 
-- **Arguments** : p_bank_id uuid, p_data json
+- **Arguments** : p_bank_id uuid, p_data jsonb
 - **Retour** : json
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin uniquement
 
-UPDATE conditionnel via `p_data ? 'field'`.
+UPDATE conditionnel via `p_data ? 'field'` (jsonb).
 
 ---
 
@@ -1042,3 +1127,75 @@ Retourne les actions planifiees dont `next_action_date <= CURRENT_DATE`, sur des
 - **Tables** : action_notifications
 
 Insere une ligne dans `action_notifications` pour marquer une action comme notifiee. Utilise `ON CONFLICT (action_id) DO NOTHING` pour eviter les doublons. Appelee par l'edge function `notify-actions` apres chaque envoi d'email reussi.
+
+---
+
+## N. Propositions de paiement
+
+### create_proposal
+
+- **Arguments** : p_case_id uuid, p_type proposal_type, p_amount numeric, p_monthly_amount numeric, p_start_date date, p_duration_months integer, p_due_date date, p_items json, p_notes text
+- **Retour** : json
+- **Securite** : SECURITY DEFINER
+- **Acces** : admin ou agent
+
+Cree une proposition selon le type :
+- one_time : 1 item avec amount + due_date
+- monthly : N items mensuels (monthly_amount * duration_months), calcule end_date
+- schedule : items depuis JSON array, calcule total amount
+Retourne la proposition avec items imbriques.
+
+---
+
+### list_case_proposals
+
+- **Arguments** : p_case_id uuid
+- **Retour** : json
+- **Securite** : SECURITY DEFINER
+- **Acces** : authenticated
+
+Retourne les propositions d'un dossier avec items imbriques et creator_name (JOIN admins/agents). ORDER BY created_at DESC.
+
+---
+
+### accept_proposal
+
+- **Arguments** : p_proposal_id uuid, p_decision_note text
+- **Retour** : json
+- **Securite** : SECURITY DEFINER
+- **Acces** : admin uniquement
+
+Verifie status=pending. Met a jour status=accepted, decision_by/at/note. Pour chaque proposal_item, INSERT INTO promises avec proposal_id. Le trigger existant trg_after_promise_insert gere la transition case.status → 'promise'.
+
+---
+
+### reject_proposal
+
+- **Arguments** : p_proposal_id uuid, p_decision_note text
+- **Retour** : json
+- **Securite** : SECURITY DEFINER
+- **Acces** : admin uniquement
+
+decision_note obligatoire (RAISE si vide). Met a jour status=rejected.
+
+---
+
+### counter_proposal
+
+- **Arguments** : p_parent_proposal_id uuid + memes parametres que create_proposal
+- **Retour** : json
+- **Securite** : SECURITY DEFINER
+- **Acces** : admin ou agent
+
+Marque l'ancienne proposition status=countered. Cree une nouvelle proposition via create_proposal avec parent_proposal_id.
+
+---
+
+### delete_proposal
+
+- **Arguments** : p_proposal_id uuid
+- **Retour** : void
+- **Securite** : SECURITY DEFINER
+- **Acces** : admin uniquement
+
+Verifie status=pending. CASCADE supprime les proposal_items.

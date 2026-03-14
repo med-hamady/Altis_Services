@@ -521,7 +521,7 @@ BEGIN
 
   -- Taux de recouvrement
   IF v_total_due > 0 THEN
-    v_recovery_rate := ROUND((v_total_recovered / v_total_due) * 100);
+    v_recovery_rate := ROUND((v_total_recovered / v_total_due) * 100, 2);
   ELSE
     v_recovery_rate := 0;
   END IF;

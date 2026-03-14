@@ -10,6 +10,9 @@ export interface AdminStats {
   activeBanks: number
   activeAgents: number
   casesWithGuarantee: number
+  proposalsPending: number
+  proposalsAccepted: number
+  proposalsCountered: number
 }
 
 export interface AgentStats {
@@ -21,9 +24,12 @@ export interface AgentStats {
 
 export interface BankUserStats {
   totalCases: number
-  casesInRecovery: number
   recoveryRate: number
   amountRecovered: number
+  casesWithGuarantee: number
+  proposalsPending: number
+  proposalsAccepted: number
+  proposalsCountered: number
 }
 
 // Hook pour les statistiques Admin
@@ -69,8 +75,12 @@ export function useBankUserStats(bankId: string | null) {
     queryFn: async (): Promise<BankUserStats> => {
       if (!bankId) throw new Error('Bank ID not provided')
 
+      console.log('[useBankUserStats] bankId envoyé:', bankId)
+
       const { data, error } = await supabase
         .rpc('get_bank_user_stats' as never, { p_bank_id: bankId } as never)
+
+      console.log('[useBankUserStats] réponse RPC:', { data, error })
 
       if (error) throw error
       return data as BankUserStats

@@ -244,6 +244,27 @@ export function DashboardPage() {
               icon={Handshake}
               isLoading={isLoading}
             />
+            <StatCard
+              title="Propositions en attente"
+              value={adminStats?.proposalsPending || 0}
+              description="À examiner"
+              icon={Clock}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Propositions acceptées"
+              value={adminStats?.proposalsAccepted || 0}
+              description="Promesses générées"
+              icon={CheckCircle}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Contre-propositions"
+              value={adminStats?.proposalsCountered || 0}
+              description="Négociations en cours"
+              icon={Activity}
+              isLoading={isLoading}
+            />
           </div>
         </>
       )}
@@ -284,36 +305,61 @@ export function DashboardPage() {
 
       {/* Statistiques - Banque */}
       {isBankUser && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Vos dossiers"
-            value={bankStats?.totalCases || 0}
-            description="Total confiés"
-            icon={FolderKanban}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="En recouvrement"
-            value={bankStats?.casesInRecovery || 0}
-            description="En cours de traitement"
-            icon={Clock}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Taux de recouvrement"
-            value={`${bankStats?.recoveryRate || 0}%`}
-            description="Sur 12 mois"
-            icon={TrendingUp}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Montant recouvré"
-            value={`${(bankStats?.amountRecovered || 0).toLocaleString('fr-FR')} MRU`}
-            description="Ce mois"
-            icon={CheckCircle}
-            isLoading={isLoading}
-          />
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Vos dossiers"
+              value={bankStats?.totalCases || 0}
+              description="Total confiés"
+              icon={FolderKanban}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Taux de recouvrement"
+              value={`${bankStats?.recoveryRate ?? 0}%`}
+              description="Sur 12 mois"
+              icon={TrendingUp}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Montant recouvré"
+              value={`${(bankStats?.amountRecovered || 0).toLocaleString('fr-FR')} MRU`}
+              description="Ce mois"
+              icon={CheckCircle}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Dossiers avec garantie"
+              value={bankStats?.casesWithGuarantee || 0}
+              description="Sûretés et garanties"
+              icon={Handshake}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              title="Propositions en attente"
+              value={bankStats?.proposalsPending || 0}
+              description="À examiner"
+              icon={Clock}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Propositions acceptées"
+              value={bankStats?.proposalsAccepted || 0}
+              description="Promesses générées"
+              icon={CheckCircle}
+              isLoading={isLoading}
+            />
+            <StatCard
+              title="Contre-propositions"
+              value={bankStats?.proposalsCountered || 0}
+              description="Négociations en cours"
+              icon={Activity}
+              isLoading={isLoading}
+            />
+          </div>
+        </>
       )}
 
       {/* Cartes activité + promesses */}

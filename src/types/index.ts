@@ -13,6 +13,8 @@ import type {
   ActionResult,
   PaymentStatus,
   PromiseStatus,
+  ProposalType,
+  ProposalStatus,
   DocumentCategory,
   DocumentVisibility,
   ClosureReason,
@@ -243,6 +245,41 @@ export interface Promise {
   status_notes: string | null
   created_by: string
   created_at: string
+}
+
+// =============================================================================
+// PROPOSITIONS DE PAIEMENT
+// =============================================================================
+
+export interface Proposal {
+  id: string
+  case_id: string
+  created_by: string
+  type: ProposalType
+  amount: number | null
+  monthly_amount: number | null
+  start_date: string | null
+  end_date: string | null
+  duration_months: number | null
+  status: ProposalStatus
+  decision_by: string | null
+  decision_at: string | null
+  decision_note: string | null
+  parent_proposal_id: string | null
+  notes: string | null
+  created_at: string
+  // Relations (chargées via RPC)
+  items?: ProposalItem[]
+  creator_name?: string
+}
+
+export interface ProposalItem {
+  id: string
+  proposal_id: string
+  due_date: string
+  amount: number
+  sort_order: number
+  notes: string | null
 }
 
 // =============================================================================

@@ -142,6 +142,36 @@ export const PromiseStatusLabels: Record<PromiseStatus, string> = {
   [PromiseStatus.Rescheduled]: 'Replanifiée',
 }
 
+// Types de proposition
+export enum ProposalType {
+  Monthly = 'monthly',
+  OneTime = 'one_time',
+  Schedule = 'schedule',
+}
+
+export const ProposalTypeLabels: Record<ProposalType, string> = {
+  [ProposalType.Monthly]: 'Mensualités',
+  [ProposalType.OneTime]: 'Paiement unique',
+  [ProposalType.Schedule]: 'Échéancier',
+}
+
+// Statuts de proposition
+export enum ProposalStatus {
+  Pending = 'pending',
+  Accepted = 'accepted',
+  Rejected = 'rejected',
+  Countered = 'countered',
+  Expired = 'expired',
+}
+
+export const ProposalStatusLabels: Record<ProposalStatus, string> = {
+  [ProposalStatus.Pending]: 'En attente',
+  [ProposalStatus.Accepted]: 'Acceptée',
+  [ProposalStatus.Rejected]: 'Rejetée',
+  [ProposalStatus.Countered]: 'Contre-proposée',
+  [ProposalStatus.Expired]: 'Expirée',
+}
+
 // Visibilité des documents
 export enum DocumentVisibility {
   Internal = 'internal',

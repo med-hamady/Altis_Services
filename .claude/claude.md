@@ -5,7 +5,7 @@
 Avant toute modification ou consultation liee a la base de donnees, tu DOIS consulter ces 3 fichiers de reference :
 
 1. **`.claude/bdd_prod.md`** - Schema complet : tables, colonnes, types, contraintes (PK/FK/Unique), politiques RLS, index, enums
-2. **`.claude/rpc_functions_code.md`** - Code source complet des 75 fonctions RPC (helpers d'auth, CRUD, admin, dashboard, imports, reports)
+2. **`.claude/rpc_functions_code.md`** - Code source complet des 83 fonctions RPC (helpers d'auth, CRUD, admin, dashboard, imports, reports, propositions)
 3. **`.claude/triggers_code.md`** - Code source complet des 11 fonctions trigger + recap des 23 triggers
 
 Ces fichiers representent l'etat exact de la base de donnees Supabase en production. Ne jamais supposer la structure d'une table ou le comportement d'un trigger sans les consulter.
@@ -40,16 +40,16 @@ Altis Services est une application web de gestion de recouvrement de creances. E
 
 ## Architecture de la base de donnees
 
-- **19 tables** avec RLS active sur toutes
-- **68 politiques RLS** pour le controle d'acces par role
-- **88 fonctions** (77 RPC + 11 trigger)
+- **21 tables** avec RLS active sur toutes
+- **77 politiques RLS** pour le controle d'acces par role
+- **94 fonctions** (83 RPC + 11 trigger)
 - **23 triggers** (audit, calcul automatique, changement de statut)
-- **10 enums** pour les types metier
-- **82 index** pour les performances
+- **12 enums** pour les types metier
+- **87 index** pour les performances
 
 Documentation complete dans :
 - `.claude/bdd_prod.md` - Schema complet (tables, colonnes, contraintes, RLS, index, enums)
-- `.claude/rpc_functions_code.md` - Code source des 77 fonctions RPC
+- `.claude/rpc_functions_code.md` - Code source des 83 fonctions RPC
 - `.claude/triggers_code.md` - Code source des 11 fonctions trigger + recap des 23 triggers
 
 ## Cycle de vie d'un dossier (case)

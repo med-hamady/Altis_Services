@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
-import type { Case, Action, Payment, Document, CaseExtraInfo } from '@/types'
+import type { Case, Action, Payment, Document, CaseExtraInfo, Proposal } from '@/types'
 import type { Promise as CasePromise } from '@/types'
+import type { ProposalType } from '@/types/enums'
 import type { ActionType, ActionResult } from '@/types/enums'
 
 export function useCaseDetail(id: string | undefined) {
@@ -384,6 +385,190 @@ export function useDeleteExtraInfo() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'extra_info'] })
+    },
+  })
+}
+
+// =============================================================================
+// PROPOSITIONS DE PAIEMENT
+// =============================================================================
+
+export function useCaseProposals(caseId: string | undefined) {
+  return useQuery({
+    queryKey: ['cases', caseId, 'proposals'],
+    queryFn: async (): Promise<Proposal[]> => {
+      const { data, error } = await supabase
+        .rpc('list_case_proposals' as never, { p_case_id: caseId! } as never)
+
+      if (error) throw error
+      return (data ?? []) as Proposal[]
+    },
+    enabled: !!caseId,
+  })
+}
+
+// =============================================================================
+// MUTATIONS : Créer une proposition
+// =============================================================================
+
+interface CreateProposalInput {
+  case_id: string
+  type: ProposalType
+  amount?: number
+  monthly_amount?: number
+  start_date?: string
+  duration_months?: number
+  due_date?: string
+  items?: { due_date: string; amount: number; notes?: string }[]
+  notes?: string
+}
+
+export function useCreateProposal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: CreateProposalInput) => {
+      const { data, error } = await supabase
+        .rpc('create_proposal' as never, {
+          p_case_id: input.case_id,
+          p_type: input.type,
+          p_amount: input.amount ?? null,
+          p_monthly_amount: input.monthly_amount ?? null,
+          p_start_date: input.start_date ?? null,
+          p_duration_months: input.duration_months ?? null,
+          p_due_date: input.due_date ?? null,
+          p_items: input.items ? JSON.stringify(input.items) : null,
+          p_notes: input.notes || null,
+        } as never)
+
+      if (error) throw error
+      return data as Proposal
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
+
+// =============================================================================
+// MUTATIONS : Accepter une proposition (génère les promesses)
+// =============================================================================
+
+export function useAcceptProposal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: { proposal_id: string; case_id: string; decision_note?: string }) => {
+      const { data, error } = await supabase
+        .rpc('accept_proposal' as never, {
+          p_proposal_id: input.proposal_id,
+          p_decision_note: input.decision_note || null,
+        } as never)
+
+      if (error) throw error
+      return data as Proposal
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'promises'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
+
+// =============================================================================
+// MUTATIONS : Rejeter une proposition
+// =============================================================================
+
+export function useRejectProposal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: { proposal_id: string; case_id: string; decision_note: string }) => {
+      const { data, error } = await supabase
+        .rpc('reject_proposal' as never, {
+          p_proposal_id: input.proposal_id,
+          p_decision_note: input.decision_note,
+        } as never)
+
+      if (error) throw error
+      return data as Proposal
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
+
+// =============================================================================
+// MUTATIONS : Contre-proposition
+// =============================================================================
+
+interface CounterProposalInput {
+  parent_proposal_id: string
+  case_id: string
+  type: ProposalType
+  amount?: number
+  monthly_amount?: number
+  start_date?: string
+  duration_months?: number
+  due_date?: string
+  items?: { due_date: string; amount: number; notes?: string }[]
+  notes?: string
+}
+
+export function useCounterProposal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: CounterProposalInput) => {
+      const { data, error } = await supabase
+        .rpc('counter_proposal' as never, {
+          p_parent_proposal_id: input.parent_proposal_id,
+          p_type: input.type,
+          p_amount: input.amount ?? null,
+          p_monthly_amount: input.monthly_amount ?? null,
+          p_start_date: input.start_date ?? null,
+          p_duration_months: input.duration_months ?? null,
+          p_due_date: input.due_date ?? null,
+          p_items: input.items ? JSON.stringify(input.items) : null,
+          p_notes: input.notes || null,
+        } as never)
+
+      if (error) throw error
+      return data as Proposal
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
+
+// =============================================================================
+// MUTATIONS : Supprimer une proposition
+// =============================================================================
+
+export function useDeleteProposal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ proposal_id, case_id: _caseId }: { proposal_id: string; case_id: string }) => {
+      const { error } = await supabase
+        .rpc('delete_proposal' as never, { p_proposal_id: proposal_id } as never)
+
+      if (error) throw error
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
     },
   })
 }

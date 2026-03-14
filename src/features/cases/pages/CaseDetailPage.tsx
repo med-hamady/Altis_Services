@@ -49,6 +49,7 @@ import {
   Maximize2,
   Minimize2,
   X,
+  Handshake,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -76,15 +77,18 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { usePermissions } from '@/contexts/AuthContext'
-import { useCaseDetail, useCaseActions, useCasePromises, useCasePayments, useValidatePayment, useUpdatePromiseStatus, useDeletePromise, useCaseExtraInfo, useCreateExtraInfo, useDeleteExtraInfo } from '../hooks/useCaseDetail'
+import { useCaseDetail, useCaseActions, useCasePromises, useCasePayments, useValidatePayment, useUpdatePromiseStatus, useDeletePromise, useCaseExtraInfo, useCreateExtraInfo, useDeleteExtraInfo, useCaseProposals, useDeleteProposal } from '../hooks/useCaseDetail'
 import { AssignAgentDialog } from '../components/AssignAgentDialog'
 import { AddActionDialog } from '../components/AddActionDialog'
 import type { ActionDialogResult } from '../components/AddActionDialog'
 import { AddPromiseDialog } from '../components/AddPromiseDialog'
+import { AddProposalDialog } from '../components/AddProposalDialog'
+import { ProposalDecisionDialog } from '../components/ProposalDecisionDialog'
 import { EditCaseDialog } from '../components/EditCaseDialog'
 import { AddPaymentDialog } from '../components/AddPaymentDialog'
 import { supabase } from '@/lib/supabase/client'
-import { ActionResult, ActionType, PromiseStatus } from '@/types/enums'
+import { ActionResult, ActionType, PromiseStatus, ProposalStatus } from '@/types/enums'
+import type { Proposal } from '@/types'
 import {
   CaseStatusLabels,
   CasePhaseLabels,
@@ -93,6 +97,8 @@ import {
   PromiseStatusLabels,
   PaymentStatusLabels,
   ClosureReasonLabels,
+  ProposalStatusLabels,
+  ProposalTypeLabels,
 } from '@/types/enums'
 
 // --- Helpers ---
@@ -152,6 +158,17 @@ const paymentStatusVariant = (status: string): 'default' | 'secondary' | 'destru
   }
 }
 
+const proposalStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  switch (status) {
+    case 'pending': return 'outline'
+    case 'accepted': return 'default'
+    case 'rejected': return 'destructive'
+    case 'countered': return 'secondary'
+    case 'expired': return 'destructive'
+    default: return 'outline'
+  }
+}
+
 // --- Info row component ---
 
 function InfoRow({ label, value, icon: Icon }: { label: string; value: string | null | undefined; icon?: React.ComponentType<{ className?: string }> }) {
@@ -176,6 +193,7 @@ export function CaseDetailPage() {
   const validatePayment = useValidatePayment()
   const updatePromiseStatus = useUpdatePromiseStatus()
   const deletePromise = useDeletePromise()
+  const deleteProposal = useDeleteProposal()
   const createExtraInfo = useCreateExtraInfo()
   const deleteExtraInfo = useDeleteExtraInfo()
 
@@ -199,6 +217,15 @@ export function CaseDetailPage() {
   const [rescheduleNotes, setRescheduleNotes] = useState('')
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deletingPromiseId, setDeletingPromiseId] = useState<string | null>(null)
+
+  // État pour les propositions
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false)
+  const [proposalDecisionOpen, setProposalDecisionOpen] = useState(false)
+  const [proposalDecisionMode, setProposalDecisionMode] = useState<'accept' | 'reject'>('accept')
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null)
+  const [counterProposalParentId, setCounterProposalParentId] = useState<string | undefined>()
+  const [deleteProposalConfirmOpen, setDeleteProposalConfirmOpen] = useState(false)
+  const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
 
   // État pour info complémentaire
   const [notesDialogOpen, setNotesDialogOpen] = useState(false)
@@ -339,9 +366,22 @@ export function CaseDetailPage() {
 
   const { data: caseData, isLoading, error } = useCaseDetail(id)
   const { data: actions } = useCaseActions(id)
+  const { data: proposals } = useCaseProposals(id)
   const { data: promises } = useCasePromises(id)
   const { data: payments } = useCasePayments(id)
   const { data: extraInfo } = useCaseExtraInfo(id)
+
+  const handleDeleteProposal = useCallback(async () => {
+    if (!id || !deletingProposalId) return
+    try {
+      await deleteProposal.mutateAsync({ proposal_id: deletingProposalId, case_id: id })
+      toast.success('Proposition supprimee')
+      setDeleteProposalConfirmOpen(false)
+      setDeletingProposalId(null)
+    } catch {
+      toast.error('Erreur lors de la suppression')
+    }
+  }, [id, deletingProposalId, deleteProposal])
 
   if (isLoading) {
     return (
@@ -739,10 +779,14 @@ export function CaseDetailPage() {
 
       {/* Onglets */}
       <Tabs defaultValue="actions">
-        <TabsList className="w-full grid grid-cols-3">
+        <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="actions" className="gap-1 text-xs sm:text-sm sm:gap-1.5">
             <MessageSquare className="hidden sm:block h-3.5 w-3.5" />
             Actions ({actions?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="proposals" className="gap-1 text-xs sm:text-sm sm:gap-1.5">
+            <Handshake className="hidden sm:block h-3.5 w-3.5" />
+            Propositions ({proposals?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="promises" className="gap-1 text-xs sm:text-sm sm:gap-1.5">
             <Calendar className="hidden sm:block h-3.5 w-3.5" />
@@ -823,6 +867,170 @@ export function CaseDetailPage() {
               ) : (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   Aucune action enregistrée
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Propositions */}
+        <TabsContent value="proposals">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Propositions de paiement</CardTitle>
+              {(canCreatePromise) && (
+                <Button size="sm" onClick={() => {
+                  setCounterProposalParentId(undefined)
+                  setProposalDialogOpen(true)
+                }}>
+                  Nouvelle proposition
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {proposals && proposals.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Montant</TableHead>
+                      <TableHead className="hidden md:table-cell">Periode</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="hidden md:table-cell">Cree par</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {proposals.map((proposal) => (
+                      <TableRow key={proposal.id}>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {formatDate(proposal.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {ProposalTypeLabels[proposal.type] || proposal.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium text-sm">
+                          {proposal.amount ? formatAmount(proposal.amount) : '—'}
+                          {proposal.monthly_amount && (
+                            <span className="block text-xs text-muted-foreground">
+                              {formatAmount(proposal.monthly_amount)}/mois
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">
+                          {proposal.start_date && proposal.end_date ? (
+                            <span>
+                              {formatDate(proposal.start_date)} — {formatDate(proposal.end_date)}
+                            </span>
+                          ) : proposal.start_date ? (
+                            formatDate(proposal.start_date)
+                          ) : (
+                            '—'
+                          )}
+                          {proposal.duration_months && (
+                            <span className="block text-xs text-muted-foreground">
+                              {proposal.duration_months} mois
+                            </span>
+                          )}
+                          {proposal.type === 'schedule' && proposal.items && (
+                            <span className="block text-xs text-muted-foreground">
+                              {proposal.items.length} echeance{proposal.items.length > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={proposalStatusVariant(proposal.status)}>
+                            {ProposalStatusLabels[proposal.status] || proposal.status}
+                          </Badge>
+                          {proposal.parent_proposal_id && (
+                            <span className="block text-xs text-muted-foreground mt-0.5">
+                              Contre-proposition
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">
+                          {proposal.creator_name || '—'}
+                        </TableCell>
+                        <TableCell>
+                          {proposal.status === ProposalStatus.Pending && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {isAdmin && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedProposal(proposal)
+                                      setProposalDecisionMode('accept')
+                                      setProposalDecisionOpen(true)
+                                    }}>
+                                      <Check className="mr-2 h-4 w-4" />
+                                      Accepter
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedProposal(proposal)
+                                      setProposalDecisionMode('reject')
+                                      setProposalDecisionOpen(true)
+                                    }}>
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Rejeter
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                <DropdownMenuItem onClick={() => {
+                                  setCounterProposalParentId(proposal.id)
+                                  setProposalDialogOpen(true)
+                                }}>
+                                  <Handshake className="mr-2 h-4 w-4" />
+                                  Contre-proposition
+                                </DropdownMenuItem>
+                                {isAdmin && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={() => {
+                                        setDeletingProposalId(proposal.id)
+                                        setDeleteProposalConfirmOpen(true)
+                                      }}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Supprimer
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                          {proposal.status !== ProposalStatus.Pending && proposal.decision_note && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title={proposal.decision_note}
+                              onClick={() => {
+                                setNotesDialogContent(proposal.decision_note!)
+                                setNotesDialogOpen(true)
+                              }}
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Aucune proposition enregistree
                 </p>
               )}
             </CardContent>
@@ -1102,6 +1310,52 @@ export function CaseDetailPage() {
         open={editCaseDialogOpen}
         onOpenChange={setEditCaseDialogOpen}
       />
+      <AddProposalDialog
+        caseId={caseData.id}
+        open={proposalDialogOpen}
+        onOpenChange={(open) => {
+          setProposalDialogOpen(open)
+          if (!open) setCounterProposalParentId(undefined)
+        }}
+        remainingBalance={remainingBalance}
+        parentProposalId={counterProposalParentId}
+      />
+      {selectedProposal && (
+        <ProposalDecisionDialog
+          proposal={selectedProposal}
+          caseId={caseData.id}
+          mode={proposalDecisionMode}
+          open={proposalDecisionOpen}
+          onOpenChange={(open) => {
+            setProposalDecisionOpen(open)
+            if (!open) setSelectedProposal(null)
+          }}
+        />
+      )}
+
+      {/* Dialog de confirmation de suppression de proposition */}
+      <Dialog open={deleteProposalConfirmOpen} onOpenChange={setDeleteProposalConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Supprimer la proposition</DialogTitle>
+            <DialogDescription>
+              Etes-vous sur de vouloir supprimer cette proposition ? Cette action est irreversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteProposalConfirmOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProposal}
+              disabled={deleteProposal.isPending}
+            >
+              {deleteProposal.isPending ? 'Suppression...' : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de rejet de paiement */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
