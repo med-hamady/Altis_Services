@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Plus, FolderKanban, Search, X, FileSpreadsheet, ArrowLeft } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { usePermissions } from '@/contexts/AuthContext'
 import { useCases } from '../hooks/useCases'
 import { useBanks } from '@/features/banks/hooks/useBanks'
 import { useImport, useImportRows } from '@/features/imports/hooks/useImports'
 import { CreateCaseDialog } from '../components/CreateCaseDialog'
+import { supabase } from '@/lib/supabase/client'
 
 const statusLabels: Record<string, string> = {
   new: 'Nouveau',
@@ -46,6 +48,19 @@ export function CasesListPage() {
     return ids
   }, [importId, importRows])
 
+  // Filtre par proposition (via RPC SECURITY DEFINER pour contourner le RLS)
+  const proposalFilter = searchParams.get('proposal') || null
+  const { data: proposalCaseIds } = useQuery({
+    queryKey: ['proposal-case-ids', proposalFilter],
+    enabled: !!proposalFilter,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('get_case_ids_by_proposal_status' as never, { p_proposal_status: proposalFilter! } as never)
+      if (error) throw error
+      return new Set(data as string[])
+    },
+  })
+
   // Filtres persistés dans l'URL
   const searchQuery = searchParams.get('q') || ''
   const selectedBankId = searchParams.get('bank') || 'all'
@@ -71,6 +86,9 @@ export function CasesListPage() {
     if (!sourceCases.length) return []
 
     return sourceCases.filter((c) => {
+      // Filtre par proposition
+      if (proposalFilter && proposalCaseIds && !proposalCaseIds.has(c.id)) return false
+
       // Filtre par banque
       if (selectedBankId !== 'all' && c.bank_id !== selectedBankId) return false
 
@@ -100,9 +118,9 @@ export function CasesListPage() {
 
       return true
     })
-  }, [cases, importCaseIds, importId, selectedBankId, selectedStatus, selectedGuarantee, searchQuery])
+  }, [cases, importCaseIds, importId, proposalFilter, proposalCaseIds, selectedBankId, selectedStatus, selectedGuarantee, searchQuery])
 
-  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || selectedGuarantee !== 'all' || searchQuery !== '' || !!importId
+  const hasActiveFilters = selectedBankId !== 'all' || selectedStatus !== 'all' || selectedGuarantee !== 'all' || searchQuery !== '' || !!importId || !!proposalFilter
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true })
@@ -159,6 +177,30 @@ export function CasesListPage() {
                 Voir tous les dossiers
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bandeau filtre proposition */}
+      {proposalFilter && (
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/10">
+          <CardContent className="flex items-center gap-4 py-4">
+            <FolderKanban className="h-8 w-8 shrink-0 text-amber-600" />
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold">
+                {proposalFilter === 'pending' && 'Dossiers avec propositions en attente'}
+                {proposalFilter === 'accepted' && 'Dossiers avec propositions acceptées'}
+                {proposalFilter === 'countered' && 'Dossiers avec contre-propositions'}
+                {proposalFilter === 'rejected' && 'Dossiers avec propositions rejetées'}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {proposalCaseIds?.size || 0} dossier(s) concerné(s)
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="mr-1 h-3 w-3" />
+              Voir tous les dossiers
+            </Button>
           </CardContent>
         </Card>
       )}

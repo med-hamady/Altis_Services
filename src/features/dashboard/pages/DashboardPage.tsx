@@ -61,6 +61,7 @@ function StatCard({
   icon: Icon,
   trend,
   isLoading,
+  onClick,
 }: {
   title: string
   value: string | number
@@ -68,11 +69,15 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>
   trend?: { value: number; positive: boolean }
   isLoading?: boolean
+  onClick?: () => void
 }) {
   if (isLoading) return <StatCardSkeleton />
 
   return (
-    <Card>
+    <Card
+      className={onClick ? 'cursor-pointer transition-colors hover:bg-muted/50' : ''}
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
@@ -215,6 +220,7 @@ export function DashboardPage() {
               description="Tous statuts confondus"
               icon={FolderKanban}
               isLoading={isLoading}
+              onClick={() => navigate('/cases')}
             />
             <StatCard
               title="Dossiers en cours"
@@ -222,18 +228,21 @@ export function DashboardPage() {
               description="Nécessitant une action"
               icon={Clock}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?status=in_progress')}
             />
             <StatCard
               title="Banques actives"
               value={adminStats?.activeBanks || 0}
               icon={Building2}
               isLoading={isLoading}
+              onClick={() => navigate('/banks')}
             />
             <StatCard
               title="Agents actifs"
               value={adminStats?.activeAgents || 0}
               icon={Users}
               isLoading={isLoading}
+              onClick={() => navigate('/users')}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -243,6 +252,7 @@ export function DashboardPage() {
               description="Sûretés et garanties"
               icon={Handshake}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?guarantee=yes')}
             />
             <StatCard
               title="Propositions en attente"
@@ -250,6 +260,7 @@ export function DashboardPage() {
               description="À examiner"
               icon={Clock}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?proposal=pending')}
             />
             <StatCard
               title="Propositions acceptées"
@@ -257,6 +268,7 @@ export function DashboardPage() {
               description="Promesses générées"
               icon={CheckCircle}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?proposal=accepted')}
             />
             <StatCard
               title="Contre-propositions"
@@ -264,6 +276,7 @@ export function DashboardPage() {
               description="Négociations en cours"
               icon={Activity}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?proposal=countered')}
             />
           </div>
         </>
@@ -313,6 +326,7 @@ export function DashboardPage() {
               description="Total confiés"
               icon={FolderKanban}
               isLoading={isLoading}
+              onClick={() => navigate('/cases')}
             />
             <StatCard
               title="Taux de recouvrement"
@@ -334,6 +348,7 @@ export function DashboardPage() {
               description="Sûretés et garanties"
               icon={Handshake}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?guarantee=yes')}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -343,6 +358,7 @@ export function DashboardPage() {
               description="À examiner"
               icon={Clock}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?proposal=pending')}
             />
             <StatCard
               title="Propositions acceptées"
@@ -350,6 +366,7 @@ export function DashboardPage() {
               description="Promesses générées"
               icon={CheckCircle}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?proposal=accepted')}
             />
             <StatCard
               title="Contre-propositions"
@@ -357,6 +374,7 @@ export function DashboardPage() {
               description="Négociations en cours"
               icon={Activity}
               isLoading={isLoading}
+              onClick={() => navigate('/cases?proposal=countered')}
             />
           </div>
         </>
