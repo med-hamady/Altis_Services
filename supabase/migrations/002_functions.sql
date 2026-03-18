@@ -219,7 +219,7 @@ BEGIN
     -- Récupérer le statut actuel et les montants
     SELECT
       c.status,
-      c.amount_principal + c.amount_interest + c.amount_penalties + c.amount_fees,
+      ABS(c.amount_principal + c.amount_interest + c.amount_penalties + c.amount_fees),
       COALESCE((
         SELECT SUM(amount)
         FROM public.payments

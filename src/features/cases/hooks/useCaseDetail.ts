@@ -176,6 +176,50 @@ export function useCreateAction() {
 }
 
 // =============================================================================
+// MUTATIONS : Modifier une action
+// =============================================================================
+
+interface UpdateActionInput {
+  action_id: string
+  case_id: string
+  action_type: ActionType
+  action_date: string
+  result: ActionResult
+  notes?: string
+  next_action_type?: ActionType
+  next_action_date?: string
+  next_action_notes?: string
+}
+
+export function useUpdateAction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: UpdateActionInput) => {
+      const { data, error } = await supabase
+        .rpc('update_action' as never, {
+          p_action_id: input.action_id,
+          p_action_type: input.action_type,
+          p_action_date: input.action_date,
+          p_result: input.result,
+          p_notes: input.notes || null,
+          p_next_action_type: input.next_action_type || null,
+          p_next_action_date: input.next_action_date || null,
+          p_next_action_notes: input.next_action_notes || null,
+        } as never)
+
+      if (error) throw error
+      return data as Action
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id, 'actions'] })
+      queryClient.invalidateQueries({ queryKey: ['cases', variables.case_id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
+
+// =============================================================================
 // MUTATIONS : Créer une promesse
 // =============================================================================
 

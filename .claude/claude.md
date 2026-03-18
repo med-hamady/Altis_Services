@@ -5,7 +5,7 @@
 Avant toute modification ou consultation liee a la base de donnees, tu DOIS consulter ces 3 fichiers de reference :
 
 1. **`.claude/bdd_prod.md`** - Schema complet : tables, colonnes, types, contraintes (PK/FK/Unique), politiques RLS, index, enums
-2. **`.claude/rpc_functions_code.md`** - Code source complet des 83 fonctions RPC (helpers d'auth, CRUD, admin, dashboard, imports, reports, propositions)
+2. **`.claude/rpc_functions_code.md`** - Code source complet des 84 fonctions RPC (helpers d'auth, CRUD, admin, dashboard, imports, reports, propositions)
 3. **`.claude/triggers_code.md`** - Code source complet des 11 fonctions trigger + recap des 23 triggers
 
 Ces fichiers representent l'etat exact de la base de donnees Supabase en production. Ne jamais supposer la structure d'une table ou le comportement d'un trigger sans les consulter.
@@ -42,7 +42,7 @@ Altis Services est une application web de gestion de recouvrement de creances. E
 
 - **21 tables** avec RLS active sur toutes
 - **77 politiques RLS** pour le controle d'acces par role
-- **94 fonctions** (83 RPC + 11 trigger)
+- **95 fonctions** (84 RPC + 11 trigger)
 - **23 triggers** (audit, calcul automatique, changement de statut)
 - **12 enums** pour les types metier
 - **87 index** pour les performances

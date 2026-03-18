@@ -801,7 +801,7 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 
 ---
 
-## Fonctions RPC (83 fonctions)
+## Fonctions RPC (84 fonctions)
 
 ### Helpers d'authentification (6 fonctions)
 | Fonction | Retour | Description |
@@ -856,11 +856,12 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 | `get_case_detail` | p_case_id uuid | Detail complet d'un dossier avec joins |
 | `update_case` | p_case_id uuid, p_data json | Met a jour les champs d'un dossier |
 
-### Actions sur les dossiers (2 fonctions)
+### Actions sur les dossiers (3 fonctions)
 | Fonction | Parametres | Description |
 |----------|-----------|-------------|
 | `assign_agent` | p_case_id uuid, p_agent_id uuid | Assigne/retire un agent d'un dossier |
 | `create_action` | p_case_id, p_action_type, p_action_date, p_result, p_notes, p_next_* | Cree une action sur un dossier |
+| `update_action` | p_action_id, p_action_type, p_action_date, p_result, p_notes, p_next_* | Modifie une action (admin: toutes ; agent: les siennes) |
 
 ### Promesses (4 fonctions)
 | Fonction | Parametres | Description |

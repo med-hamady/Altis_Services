@@ -33,8 +33,8 @@ get_admin_stats, get_agent_stats, get_bank_user_stats, get_case_ids_by_proposal_
 ### H. Dossiers / Cases (7) — NOUVEAU
 _build_case_json (helper), list_cases, list_archived_cases, create_case, get_case_detail, assign_agent, update_case
 
-### I. Details dossier (10) — NOUVEAU
-list_case_actions, list_case_promises, list_case_payments, list_case_documents, create_action, create_promise, update_promise_status, delete_promise, create_payment, validate_payment
+### I. Details dossier (11) — NOUVEAU
+list_case_actions, list_case_promises, list_case_payments, list_case_documents, create_action, update_action, create_promise, update_promise_status, delete_promise, create_payment, validate_payment
 
 ### J. Banques (8) — NOUVEAU
 list_banks, get_bank, create_bank, update_bank, delete_bank, update_bank_profile, update_bank_user_profile, toggle_bank_status
@@ -690,7 +690,7 @@ Verifie l'acces puis retourne via _build_case_json.
 - **Securite** : SECURITY DEFINER
 - **Acces** : admin uniquement
 
-UPDATE assigned_agent_id + status (assigned/new). Retourne via _build_case_json.
+UPDATE assigned_agent_id + status. Logique : si agent NULL → 'new' ; si status actuel = 'new' → 'assigned' ; sinon préserve le statut courant (ne downgrade pas in_progress, promise, partial_payment, etc.). Retourne via _build_case_json.
 
 ---
 
@@ -705,7 +705,7 @@ UPDATE conditionnel (phase, default_date, amount_principal/interest/penalties/fe
 
 ---
 
-## I. Details dossier (NOUVEAU)
+## I. Details dossier (11 fonctions)
 
 ### list_case_actions
 
@@ -759,6 +759,66 @@ ORDER BY uploaded_at DESC.
 - **Acces** : admin ou agent
 
 INSERT INTO actions avec created_by = auth.uid().
+
+---
+
+### update_action
+
+- **Arguments** : p_action_id uuid, p_action_type action_type, p_action_date timestamptz, p_result action_result, p_notes text, p_next_action_type action_type, p_next_action_date date, p_next_action_notes text
+- **Retour** : json
+- **Securite** : SECURITY DEFINER
+- **Acces** : admin (toutes les actions) ou agent (ses propres actions uniquement, created_by = auth.uid())
+
+```sql
+CREATE OR REPLACE FUNCTION update_action(
+  p_action_id uuid,
+  p_action_type action_type,
+  p_action_date timestamptz,
+  p_result action_result,
+  p_notes text DEFAULT NULL,
+  p_next_action_type action_type DEFAULT NULL,
+  p_next_action_date date DEFAULT NULL,
+  p_next_action_notes text DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_action actions;
+  v_uid uuid := auth.uid();
+BEGIN
+  -- Admin peut tout modifier, agent seulement ses propres actions
+  IF NOT (
+    EXISTS (SELECT 1 FROM admins WHERE id = v_uid AND is_active = true)
+    OR EXISTS (
+      SELECT 1 FROM agents WHERE id = v_uid AND is_active = true
+      AND v_uid = (SELECT created_by FROM actions WHERE id = p_action_id)
+    )
+  ) THEN
+    RAISE EXCEPTION 'Permission refusée';
+  END IF;
+
+  UPDATE actions SET
+    action_type = p_action_type,
+    action_date = p_action_date,
+    result = p_result,
+    notes = p_notes,
+    next_action_type = p_next_action_type,
+    next_action_date = p_next_action_date,
+    next_action_notes = p_next_action_notes
+  WHERE id = p_action_id
+  RETURNING * INTO v_action;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Action introuvable';
+  END IF;
+
+  RETURN row_to_json(v_action);
+END;
+$$;
+```
 
 ---
 

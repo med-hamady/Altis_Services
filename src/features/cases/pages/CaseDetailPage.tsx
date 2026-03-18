@@ -86,9 +86,10 @@ import { AddProposalDialog } from '../components/AddProposalDialog'
 import { ProposalDecisionDialog } from '../components/ProposalDecisionDialog'
 import { EditCaseDialog } from '../components/EditCaseDialog'
 import { AddPaymentDialog } from '../components/AddPaymentDialog'
+import { EditActionDialog } from '../components/EditActionDialog'
 import { supabase } from '@/lib/supabase/client'
 import { ActionResult, ActionType, PromiseStatus, ProposalStatus } from '@/types/enums'
-import type { Proposal } from '@/types'
+import type { Action, Proposal } from '@/types'
 import {
   CaseStatusLabels,
   CasePhaseLabels,
@@ -189,7 +190,7 @@ function InfoRow({ label, value, icon: Icon }: { label: string; value: string | 
 export function CaseDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { isAdmin, canCreateAction, canCreatePromise, canDeclarePayment, canValidatePayment } = usePermissions()
+  const { isAdmin, userId, canCreateAction, canCreatePromise, canDeclarePayment, canValidatePayment } = usePermissions()
   const validatePayment = useValidatePayment()
   const updatePromiseStatus = useUpdatePromiseStatus()
   const deletePromise = useDeletePromise()
@@ -199,6 +200,7 @@ export function CaseDetailPage() {
 
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [actionDialogOpen, setActionDialogOpen] = useState(false)
+  const [editingAction, setEditingAction] = useState<Action | null>(null)
   const [promiseDialogOpen, setPromiseDialogOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [editCaseDialogOpen, setEditCaseDialogOpen] = useState(false)
@@ -819,6 +821,7 @@ export function CaseDetailPage() {
                       <TableHead>Résultat</TableHead>
                       <TableHead className="hidden md:table-cell">Compte-rendu</TableHead>
                       <TableHead className="hidden md:table-cell">Prochaine action</TableHead>
+                      {canCreateAction && <TableHead className="w-[50px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -860,6 +863,19 @@ export function CaseDetailPage() {
                             </span>
                           ) : '—'}
                         </TableCell>
+                        {canCreateAction && (
+                          <TableCell>
+                            {(isAdmin || action.created_by === userId) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingAction(action)}
+                              >
+                                Modifier
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1286,6 +1302,14 @@ export function CaseDetailPage() {
         onCreated={handleActionCreated}
         defaultActionType={defaultActionType}
       />
+      {editingAction && (
+        <EditActionDialog
+          action={editingAction}
+          caseId={caseData.id}
+          open={editingAction !== null}
+          onOpenChange={(open) => { if (!open) setEditingAction(null) }}
+        />
+      )}
       <AddPromiseDialog
         caseId={caseData.id}
         open={promiseDialogOpen}
