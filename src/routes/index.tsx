@@ -14,6 +14,7 @@ import { BanksPage } from '@/features/banks/pages/BanksPage'
 
 // Pages des utilisateurs
 import { UsersListPage } from '@/features/users/pages/UsersListPage'
+import { AgentDetailPage } from '@/features/agents/pages/AgentDetailPage'
 
 // Pages des dossiers
 import { CasesListPage } from '@/features/cases/pages/CasesListPage'
@@ -65,6 +66,10 @@ export const router = createBrowserRouter([
       {
         path: 'users',
         element: <RoleGuard allowedRoles={['admin']}><UsersListPage /></RoleGuard>,
+      },
+      {
+        path: 'agents/:id',
+        element: <RoleGuard allowedRoles={['admin']}><AgentDetailPage /></RoleGuard>,
       },
       {
         path: 'cases',

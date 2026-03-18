@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Plus, UserCheck, Pencil, Trash2, MoreVertical } from 'lucide-react'
+import { Plus, UserCheck, Pencil, Trash2, MoreVertical, Eye } from 'lucide-react'
 import { useAgents, useDeleteAgent } from '../hooks/useUsers'
 import { AgentDialog } from './AgentDialog'
 import { EditAgentDialog } from './EditAgentDialog'
@@ -20,6 +21,7 @@ import type { Agent } from '@/types'
 export function AgentsTable() {
   const { data: agents, isLoading } = useAgents()
   const deleteAgent = useDeleteAgent()
+  const navigate = useNavigate()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editAgent, setEditAgent] = useState<Agent | null>(null)
 
@@ -88,6 +90,10 @@ export function AgentsTable() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => navigate(`/agents/${agent.id}`)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Voir le profil
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setEditAgent(agent)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Modifier

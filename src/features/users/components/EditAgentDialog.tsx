@@ -32,6 +32,7 @@ import type { Agent } from '@/types'
 type EditAgentFormData = {
   full_name: string
   phone: string
+  sector: string
   is_active: string
   pin: string
 }
@@ -51,6 +52,7 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
     defaultValues: {
       full_name: '',
       phone: '',
+      sector: '',
       is_active: 'true',
       pin: '',
     },
@@ -61,6 +63,7 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
       form.reset({
         full_name: agent.full_name || '',
         phone: agent.phone || '',
+        sector: agent.sector || '',
         is_active: agent.is_active ? 'true' : 'false',
         pin: '',
       })
@@ -77,13 +80,17 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
         agent: {
           full_name: data.full_name,
           phone: data.phone || null,
+          sector: data.sector || null,
           is_active: data.is_active === 'true',
-        } as never,
+        },
         password: data.pin ? `altis${data.pin}` : undefined,
       })
       onOpenChange(false)
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erreur inconnue'
+      const message =
+        error instanceof Error
+          ? error.message
+          : (error as { message?: string })?.message ?? 'Erreur inconnue'
       setServerError(message)
     }
   }
@@ -129,6 +136,20 @@ export function EditAgentDialog({ agent, open, onOpenChange }: EditAgentDialogPr
                   <FormLabel>Téléphone</FormLabel>
                   <FormControl>
                     <Input placeholder="+222 33 12 34 56" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="sector"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Secteur</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Immobilier, Commerce..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

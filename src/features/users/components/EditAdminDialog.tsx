@@ -83,7 +83,7 @@ export function EditAdminDialog({ admin, open, onOpenChange }: EditAdminDialogPr
       })
       onOpenChange(false)
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erreur inconnue'
+      const message = (error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Erreur inconnue')
       setServerError(message)
     }
   }

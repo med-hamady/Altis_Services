@@ -42,6 +42,7 @@ export interface Agent {
   username: string | null
   full_name: string
   phone: string | null
+  sector: string | null
   is_active: boolean
   created_at: string
   updated_at: string

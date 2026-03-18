@@ -68,7 +68,7 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
       onOpenChange(false)
       form.reset()
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erreur inconnue'
+      const message = (error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Erreur inconnue')
       if (message.includes('rate limit') || message.includes('429')) {
         setServerError("Trop de tentatives. Veuillez attendre quelques minutes avant de réessayer.")
       } else if (message.includes('already registered') || message.includes('duplicate')) {
