@@ -66,7 +66,7 @@ export function useAgentActions(agentId: string | undefined) {
 
       if (casesError) throw casesError
 
-      const caseIds = (casesData ?? []).map((c) => c.id)
+      const caseIds = (casesData ?? []).map((c) => (c as { id: string }).id)
       if (caseIds.length === 0) return []
 
       // 2. Récupérer toutes les actions sur ces dossiers
