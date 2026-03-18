@@ -3,7 +3,7 @@
 > Document auto-genere a partir de Supabase
 > Derniere mise a jour : 2026-03-14
 
-**Total : 83 fonctions** (15 anciennes + 67 nouvelles + 1 helper)
+**Total : 84 fonctions** (15 anciennes + 68 nouvelles + 1 helper)
 
 ---
 
@@ -27,8 +27,8 @@ get_user_profile, get_admin_emails, get_pending_action_notifications, mark_actio
 ### F. Gestion des utilisateurs (9) — NOUVEAU
 list_admins, create_admin, update_admin, list_agents, create_agent, update_agent, list_bank_users, create_bank_user, update_bank_user
 
-### G. Dashboard stats (5) — NOUVEAU
-get_admin_stats, get_agent_stats, get_bank_user_stats, get_recent_actions, get_upcoming_promises
+### G. Dashboard stats (6) — NOUVEAU
+get_admin_stats, get_agent_stats, get_bank_user_stats, get_case_ids_by_proposal_status, get_recent_actions, get_upcoming_promises
 
 ### H. Dossiers / Cases (7) — NOUVEAU
 _build_case_json (helper), list_cases, list_archived_cases, create_case, get_case_detail, assign_agent, update_case

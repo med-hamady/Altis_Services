@@ -341,7 +341,14 @@ export function CasesListPage() {
                         {formatAmount(totalAmount)}
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm">{statusLabels[c.status] || c.status}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm">{statusLabels[c.status] || c.status}</span>
+                          {c.status !== 'assigned' && (
+                            <span className={`text-xs ${c.assigned_agent_id ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                              {c.assigned_agent_id ? 'Affecté' : 'Non affecté'}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

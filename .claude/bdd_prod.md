@@ -837,12 +837,13 @@ Tables avec RLS : action_attachments, action_notifications, actions, admins, age
 | `create_bank_user` | p_data json | Cree un profil bank_user |
 | `update_bank_user` | p_user_id uuid, p_data json | Met a jour un profil bank_user |
 
-### Dashboard / Statistiques (5 fonctions)
+### Dashboard / Statistiques (6 fonctions)
 | Fonction | Parametres | Retour | Description |
 |----------|-----------|--------|-------------|
 | `get_admin_stats` | - | json | Stats admin : total dossiers, actifs, banques, agents, garanties, propositions (pending/accepted/countered) |
 | `get_agent_stats` | p_agent_id uuid | json | Stats agent : mes dossiers, a traiter, promesses a venir, clos ce mois |
-| `get_bank_user_stats` | p_bank_id uuid | json | Stats banque : total, en recouvrement, montants, paiements mensuels |
+| `get_bank_user_stats` | p_bank_id uuid | json | Stats banque : total, taux recouvrement (2 dec), montant recouvre, garanties, propositions (pending/accepted/countered) |
+| `get_case_ids_by_proposal_status` | p_proposal_status text | json | Liste des case_id ayant une proposition du statut donne (filtre par role) |
 | `get_recent_actions` | p_user_id uuid, p_role text | json[] | 15 dernieres actions avec infos dossier/debiteur |
 | `get_upcoming_promises` | p_user_id uuid, p_role text | json[] | Promesses a venir 7 jours avec infos dossier/debiteur |
 
